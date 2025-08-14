@@ -15,7 +15,7 @@
           "command": "npx",
           "args": ["-y", "@sei-js/mcp-server"],
           "env": {
-            "PRIVATE_KEY": "0x0f2d48cef12a3bf037f986780583da871c88d4d7e5e7dcf9bbd6234127703ca3"
+            "PRIVATE_KEY": "your_private_key"
           }
         }
       }
