@@ -1,0 +1,798 @@
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { 
+  Activity, 
+  AlertCircle, 
+  CheckCircle, 
+  Clock, 
+  Database, 
+  GitBranch, 
+  Globe, 
+  Lock, 
+  Monitor, 
+  Play, 
+  Plus, 
+  RefreshCw, 
+  Server, 
+  Settings, 
+  Shield, 
+  Trash2, 
+  Users, 
+  Workflow,
+  XCircle,
+  Zap
+} from 'lucide-react';
+
+// Types
+interface MCPServer {
+  id: string;
+  name: string;
+  status: 'connected' | 'disconnected' | 'connecting' | 'error';
+  tools: number;
+  lastSeen?: Date;
+  version?: string;
+  capabilities?: string[];
+}
+
+interface MCPWorkflow {
+  id: string;
+  name: string;
+  status: 'running' | 'completed' | 'failed' | 'pending';
+  progress: number;
+  startTime: Date;
+  duration?: number;
+  steps: number;
+  completedSteps: number;
+}
+
+interface MCPMetrics {
+  totalServers: number;
+  connectedServers: number;
+  totalTools: number;
+  activeWorkflows: number;
+  completedWorkflows: number;
+  failedWorkflows: number;
+  securityViolations: number;
+  averageResponseTime: number;
+}
+
+interface MCPEvent {
+  id: string;
+  type: string;
+  category: 'system' | 'workflow' | 'tool' | 'server' | 'security' | 'user';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  message: string;
+  timestamp: Date;
+  source: string;
+}
+
+interface MCPSecurityRule {
+  id: string;
+  name: string;
+  enabled: boolean;
+  type: 'rate_limit' | 'access_control' | 'content_filter' | 'approval_required';
+  description: string;
+  violations: number;
+}
+
+const MCPDashboard: React.FC = () => {
+  // State management
+  const [activeTab, setActiveTab] = useState('overview');
+  const [servers, setServers] = useState<MCPServer[]>([]);
+  const [workflows, setWorkflows] = useState<MCPWorkflow[]>([]);
+  const [metrics, setMetrics] = useState<MCPMetrics>({
+    totalServers: 0,
+    connectedServers: 0,
+    totalTools: 0,
+    activeWorkflows: 0,
+    completedWorkflows: 0,
+    failedWorkflows: 0,
+    securityViolations: 0,
+    averageResponseTime: 0
+  });
+  const [events, setEvents] = useState<MCPEvent[]>([]);
+  const [securityRules, setSecurityRules] = useState<MCPSecurityRule[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [addServerDialogOpen, setAddServerDialogOpen] = useState(false);
+  const [newServerForm, setNewServerForm] = useState({
+    name: '',
+    command: '',
+    args: ''
+  });
+
+  // Fetch MCP data from API
+  const fetchMCPData = useCallback(async () => {
+    try {
+      const response = await fetch('/api/mcp/status');
+      const result = await response.json();
+      
+      if (result.success) {
+        const { servers: serverData, workflows: workflowData, metrics: metricsData, events: eventsData } = result.data;
+        
+        // Convert timestamp strings back to Date objects
+        const processedEvents = eventsData.map((event: any) => ({
+          ...event,
+          timestamp: new Date(event.timestamp)
+        }));
+        
+        const processedWorkflows = workflowData.map((workflow: any) => ({
+          ...workflow,
+          startTime: new Date(workflow.startTime)
+        }));
+        
+        const processedServers = serverData.map((server: any) => ({
+          ...server,
+          lastSeen: server.lastSeen ? new Date(server.lastSeen) : undefined
+        }));
+        
+        setServers(processedServers);
+        setWorkflows(processedWorkflows);
+        setMetrics(metricsData);
+        setEvents(processedEvents);
+        
+        // Initialize security rules (mock data for now)
+        setSecurityRules([
+          {
+            id: 'rate-limit-1',
+            name: 'Tool Call Rate Limit',
+            enabled: true,
+            type: 'rate_limit',
+            description: 'Limit tool calls to 100 per minute',
+            violations: 0
+          },
+          {
+            id: 'approval-1',
+            name: 'File Operation Approval',
+            enabled: true,
+            type: 'approval_required',
+            description: 'Require approval for file write operations',
+            violations: 0
+          }
+        ]);
+      } else {
+        console.error('Failed to fetch MCP data:', result.error);
+        // Fallback to mock data
+        initializeEmptyData();
+      }
+    } catch (error) {
+      console.error('Error fetching MCP data:', error);
+      // Fallback to mock data
+      initializeEmptyData();
+    }
+  }, []);
+
+  // Initialize empty data when API fails
+  const initializeEmptyData = () => {
+    setServers([]);
+    setWorkflows([]);
+    setMetrics({
+      totalServers: 0,
+      connectedServers: 0,
+      totalTools: 0,
+      activeWorkflows: 0,
+      completedWorkflows: 0,
+      failedWorkflows: 0,
+      securityViolations: 0,
+      averageResponseTime: 0
+    });
+    setEvents([]);
+  };
+
+  // Initial data load
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      await fetchMCPData();
+      setIsLoading(false);
+    };
+    loadData();
+  }, []); // Remove fetchMCPData dependency to prevent infinite re-renders
+
+  // Auto-refresh data every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchMCPData();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []); // Remove fetchMCPData dependency to prevent infinite re-renders
+
+  // Refresh data
+  const refreshData = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const response = await fetch('/api/mcp/status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'refresh' })
+      });
+      
+      if (response.ok) {
+        await fetchMCPData();
+      }
+    } catch (error) {
+      console.error('Error refreshing MCP data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchMCPData]);
+
+  // Server management functions
+  const handleServerAction = useCallback(async (action: string, serverName?: string, serverConfig?: any) => {
+    try {
+      const response = await fetch('/api/mcp/status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action, serverName, serverConfig })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        await fetchMCPData(); // Refresh data after action
+      } else {
+        console.error('Server action failed:', result.error);
+      }
+    } catch (error) {
+      console.error('Error performing server action:', error);
+    }
+  }, [fetchMCPData]);
+
+  // Get status color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'connected':
+      case 'completed':
+        return 'text-green-600';
+      case 'running':
+      case 'connecting':
+        return 'text-blue-600';
+      case 'error':
+      case 'failed':
+        return 'text-red-600';
+      case 'disconnected':
+      case 'pending':
+        return 'text-gray-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+
+  // Get severity color
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical':
+        return 'text-red-600 bg-red-50';
+      case 'high':
+        return 'text-orange-600 bg-orange-50';
+      case 'medium':
+        return 'text-yellow-600 bg-yellow-50';
+      case 'low':
+        return 'text-blue-600 bg-blue-50';
+      default:
+        return 'text-gray-600 bg-gray-50';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="flex items-center space-x-2">
+          <RefreshCw className="h-4 w-4 animate-spin" />
+          <span>Loading MCP Dashboard...</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">MCP Dashboard</h1>
+          <p className="text-muted-foreground">
+            Comprehensive Model Context Protocol management interface
+          </p>
+        </div>
+        <Button onClick={refreshData} disabled={refreshing}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
+
+      {/* Overview Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Connected Servers</CardTitle>
+            <Server className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.connectedServers}/{metrics.totalServers}</div>
+            <p className="text-xs text-muted-foreground">
+              {metrics.totalTools} tools available
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Workflows</CardTitle>
+            <Workflow className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.activeWorkflows}</div>
+            <p className="text-xs text-muted-foreground">
+              {metrics.completedWorkflows} completed, {metrics.failedWorkflows} failed
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Security Status</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.securityViolations}</div>
+            <p className="text-xs text-muted-foreground">
+              violations detected
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Response Time</CardTitle>
+            <Zap className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.averageResponseTime}ms</div>
+            <p className="text-xs text-muted-foreground">
+              average response time
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="servers">Servers</TabsTrigger>
+          <TabsTrigger value="workflows">Workflows</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="events">Events</TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Server Status */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Server Status</CardTitle>
+                <CardDescription>Current status of all MCP servers</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {servers.map((server) => (
+                    <div key={server.id} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          server.status === 'connected' ? 'bg-green-500' :
+                          server.status === 'connecting' ? 'bg-blue-500' :
+                          server.status === 'error' ? 'bg-red-500' : 'bg-gray-500'
+                        }`} />
+                        <span className="font-medium">{server.name}</span>
+                      </div>
+                      <Badge variant="outline" className={getStatusColor(server.status)}>
+                        {server.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Events */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Events</CardTitle>
+                <CardDescription>Latest system events and notifications</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-48">
+                  <div className="space-y-3">
+                    {events.slice(0, 5).map((event) => (
+                      <div key={event.id} className="flex items-start space-x-2">
+                        <Badge className={`text-xs ${getSeverityColor(event.severity)}`}>
+                          {event.severity}
+                        </Badge>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{event.message}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {event.source} • {event.timestamp instanceof Date ? event.timestamp.toLocaleTimeString() : new Date(event.timestamp).toLocaleTimeString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Active Workflows */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Active Workflows</CardTitle>
+              <CardDescription>Currently running workflow executions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {workflows.filter(w => w.status === 'running').map((workflow) => (
+                  <div key={workflow.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{workflow.name}</span>
+                      <Badge className={getStatusColor(workflow.status)}>
+                        {workflow.status}
+                      </Badge>
+                    </div>
+                    <Progress value={workflow.progress} className="h-2" />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Step {workflow.completedSteps}/{workflow.steps}</span>
+                      <span>{workflow.progress}% complete</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Servers Tab */}
+        <TabsContent value="servers" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">MCP Servers</h2>
+            <Dialog open={addServerDialogOpen} onOpenChange={setAddServerDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Server
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add MCP Server</DialogTitle>
+                  <DialogDescription>
+                    Configure a new MCP server connection
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="server-name">Server Name</Label>
+                    <Input 
+                      id="server-name" 
+                      placeholder="Enter server name" 
+                      value={newServerForm.name}
+                      onChange={(e) => setNewServerForm(prev => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="server-command">Command</Label>
+                    <Input 
+                      id="server-command" 
+                      placeholder="npx @modelcontextprotocol/server-example" 
+                      value={newServerForm.command}
+                      onChange={(e) => setNewServerForm(prev => ({ ...prev, command: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="server-args">Arguments</Label>
+                    <Textarea 
+                      id="server-args" 
+                      placeholder="--arg1 value1 --arg2 value2" 
+                      value={newServerForm.args}
+                      onChange={(e) => setNewServerForm(prev => ({ ...prev, args: e.target.value }))}
+                    />
+                  </div>
+                  <Button 
+                    className="w-full" 
+                    onClick={async () => {
+                       if (newServerForm.name && newServerForm.command) {
+                         await handleServerAction('connect', undefined, {
+                           name: newServerForm.name,
+                           command: newServerForm.command,
+                           args: newServerForm.args.split(' ').filter(arg => arg.trim())
+                         });
+                         setNewServerForm({ name: '', command: '', args: '' });
+                         setAddServerDialogOpen(false);
+                       }
+                     }}
+                    disabled={!newServerForm.name || !newServerForm.command}
+                  >
+                    Add Server
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <div className="grid gap-4">
+            {servers.map((server) => (
+              <Card key={server.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className={`w-3 h-3 rounded-full ${
+                        server.status === 'connected' ? 'bg-green-500' :
+                        server.status === 'connecting' ? 'bg-blue-500' :
+                        server.status === 'error' ? 'bg-red-500' : 'bg-gray-500'
+                      }`} />
+                      <CardTitle>{server.name}</CardTitle>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge className={getStatusColor(server.status)}>
+                        {server.status}
+                      </Badge>
+                      <Button variant="outline" size="sm">
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <CardDescription>
+                    {server.tools} tools • Version {server.version}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Last Seen:</span>
+                      <span className="text-muted-foreground">
+                        {server.lastSeen?.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Capabilities:</span>
+                      <div className="flex space-x-1">
+                        {server.capabilities?.map((cap) => (
+                          <Badge key={cap} variant="secondary" className="text-xs">
+                            {cap}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  {server.status === 'error' && (
+                    <Alert className="mt-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Connection Error</AlertTitle>
+                      <AlertDescription>
+                        Failed to connect to server. Check server configuration and try again.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* Workflows Tab */}
+        <TabsContent value="workflows" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Workflow Management</h2>
+            <Button>
+              <Play className="h-4 w-4 mr-2" />
+              New Workflow
+            </Button>
+          </div>
+
+          <div className="grid gap-4">
+            {workflows.map((workflow) => (
+              <Card key={workflow.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>{workflow.name}</CardTitle>
+                    <Badge className={getStatusColor(workflow.status)}>
+                      {workflow.status}
+                    </Badge>
+                  </div>
+                  <CardDescription>
+                    Started {workflow.startTime.toLocaleString()}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {workflow.status === 'running' && (
+                      <div className="space-y-2">
+                        <Progress value={workflow.progress} />
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>Step {workflow.completedSteps}/{workflow.steps}</span>
+                          <span>{workflow.progress}% complete</span>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Duration:</span>
+                      <span>
+                        {workflow.duration ? 
+                          `${Math.round(workflow.duration / 1000)}s` : 
+                          `${Math.round((Date.now() - workflow.startTime.getTime()) / 1000)}s`
+                        }
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* Security Tab */}
+        <TabsContent value="security" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Security Management</h2>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Rule
+            </Button>
+          </div>
+
+          <div className="grid gap-4">
+            {securityRules.map((rule) => (
+              <Card key={rule.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Switch checked={rule.enabled} />
+                      <CardTitle>{rule.name}</CardTitle>
+                    </div>
+                    <Badge variant={rule.violations > 0 ? 'destructive' : 'secondary'}>
+                      {rule.violations} violations
+                    </Badge>
+                  </div>
+                  <CardDescription>{rule.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Type: {rule.type.replace('_', ' ')}</span>
+                    <Button variant="outline" size="sm">
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* Analytics Tab */}
+        <TabsContent value="analytics" className="space-y-4">
+          <h2 className="text-2xl font-bold">Analytics & Monitoring</h2>
+          
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Performance Metrics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span>Average Response Time</span>
+                    <span className="font-mono">{metrics.averageResponseTime}ms</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Total Tool Calls</span>
+                    <span className="font-mono">1,234</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Success Rate</span>
+                    <span className="font-mono">98.5%</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>System Health</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span>CPU Usage</span>
+                    <span className="font-mono">23%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Memory Usage</span>
+                    <span className="font-mono">512MB</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Uptime</span>
+                    <span className="font-mono">2d 14h 32m</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Events Tab */}
+        <TabsContent value="events" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">System Events</h2>
+            <Select defaultValue="all">
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="system">System</SelectItem>
+                <SelectItem value="workflow">Workflow</SelectItem>
+                <SelectItem value="security">Security</SelectItem>
+                <SelectItem value="server">Server</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Severity</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Message</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Time</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {events.map((event) => (
+                    <TableRow key={event.id}>
+                      <TableCell>
+                        <Badge className={getSeverityColor(event.severity)}>
+                          {event.severity}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{event.category}</TableCell>
+                      <TableCell>{event.message}</TableCell>
+                      <TableCell className="font-mono text-sm">{event.source}</TableCell>
+                      <TableCell>{event.timestamp instanceof Date ? event.timestamp.toLocaleString() : new Date(event.timestamp).toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default MCPDashboard;
