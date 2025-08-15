@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MCPClient, createMCPClientFromConfig } from '@/lib/mcp-client';
+import { MCPClient } from '@/lib/mcp-client';
+import MCPClientSingleton from '@/lib/mcp-singleton';
 
 // Global MCP client instance
 let mcpClient: MCPClient | null = null;
@@ -68,9 +69,10 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case 'connect':
         try {
-          // Initialize MCP client with default or provided config
-          const mcpConfig = config ? JSON.stringify(config) : JSON.stringify(defaultMCPConfig);
-          mcpClient = createMCPClientFromConfig(mcpConfig);
+          // Use the singleton MCP client instead of creating a new one
+          console.log('Eliza: Getting MCP client from singleton...');
+          mcpClient = await MCPClientSingleton.getInstance();
+          console.log('Eliza: Got MCP client instance:', mcpClient.instanceId);
           
           // Set up event listeners
           mcpClient.on('status', (status) => {
@@ -85,8 +87,7 @@ export async function POST(request: NextRequest) {
             console.log('MCP Server Connected:', event);
           });
           
-          // Initialize the client
-          await mcpClient.initialize();
+          // Client is already initialized by singleton
           
           // Simulate Eliza agent initialization
           elizaAgent = {
