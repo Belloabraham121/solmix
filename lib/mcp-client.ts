@@ -584,6 +584,19 @@ export class MCPClient extends EventEmitter {
       message
     );
 
+    // Debug: Log message structure
+    console.log(
+      `[MCP Client] DEBUG: Message structure for ${connection.name}:`,
+      {
+        hasResult: !!message.result,
+        hasTools: !!(message.result && message.result.tools),
+        hasId: !!message.id,
+        hasMethod: !!message.method,
+        messageKeys: Object.keys(message),
+        resultKeys: message.result ? Object.keys(message.result) : null,
+      }
+    );
+
     // Handle initialize response from server
     if (message.result && message.id && !message.method) {
       // This is likely a response to our initialize request
@@ -624,13 +637,36 @@ export class MCPClient extends EventEmitter {
           error
         );
       }
-    } else if (message.result && message.result.tools) {
+    }
+
+    console.log(
+      `[MCP Client] DEBUG: Checking condition for ${
+        connection.name
+      }: hasResult=${!!message.result}, hasTools=${!!(
+        message.result && message.result.tools
+      )}`
+    );
+
+    if (message.result && message.result.tools) {
       // Server responded with tools list
+      console.log(
+        `[MCP Client] DEBUG: About to mark ${connection.name} as connected`
+      );
       connection.tools = message.result.tools;
       connection.connected = true;
       console.log(
         `[MCP Client] ${connection.name} connected with ${connection.tools.length} tools:`,
         connection.tools.map((t) => t.name)
+      );
+      console.log(
+        `[MCP Client] Connection marked as connected for ${connection.name}`
+      );
+      console.log(
+        `[MCP Client] Current connections map size: ${this.connections.size}`
+      );
+      console.log(
+        `[MCP Client] All connections:`,
+        Array.from(this.connections.keys())
       );
       console.log(
         `[MCP Client] Emitting serverConnected event for ${connection.name}`
@@ -1505,8 +1541,9 @@ export class MCPClient extends EventEmitter {
 
   getOptimizationMetrics() {
     // Add some sample data for testing if no real data exists
-    const hasRealData = this.cacheStats.totalRequests > 0 || this.messageStats.totalMessages > 0;
-    
+    const hasRealData =
+      this.cacheStats.totalRequests > 0 || this.messageStats.totalMessages > 0;
+
     if (!hasRealData) {
       // Return sample data for testing
       return {
@@ -1536,7 +1573,7 @@ export class MCPClient extends EventEmitter {
         streamingProgress: 100,
       };
     }
-    
+
     return {
       cacheHitRate:
         this.cacheStats.totalRequests > 0

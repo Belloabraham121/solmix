@@ -89,6 +89,10 @@ export async function POST(request: NextRequest) {
           
           // Client is already initialized by singleton
           
+          // Get available tools from MCP client
+          const availableTools = mcpClient.getAllTools();
+          console.log('Available tools:', availableTools);
+          
           // Simulate Eliza agent initialization
           elizaAgent = {
             id: 'eliza-' + Date.now(),
@@ -96,7 +100,7 @@ export async function POST(request: NextRequest) {
             capabilities: ['smart-contract-analysis', 'code-review', 'deployment-guidance'],
             mcpIntegration: true,
             connectedServers: mcpClient.getConnectedServers(),
-            availableTools: mcpClient.getAllTools()
+            availableTools: availableTools
           };
           
           return NextResponse.json({
@@ -149,15 +153,76 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
           }
           
+          // Extract MCP context from request
+          const { mcpContext } = body;
+          
           // Simulate processing time
           await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
           
-          // Check if the message requests tool usage
-          const lowerMessage = message.toLowerCase();
           let response = '';
+          const lowerMessage = message.toLowerCase();
           
-          if (lowerMessage.includes('list tools') || lowerMessage.includes('available tools')) {
-            const tools = mcpClient.getAllTools();
+          // Handle MCP context-aware queries
+          if (mcpContext && mcpContext.serverId) {
+            console.log('Processing message with MCP context:', mcpContext);
+            
+            try {
+              // Handle Sei blockchain queries
+              if (mcpContext.serverId === 'sei-mcp-server') {
+                if (lowerMessage.includes('balance') && lowerMessage.includes('0x')) {
+                  // Extract address from message
+                  const addressMatch = message.match(/0x[a-fA-F0-9]{40}/);
+                  if (addressMatch) {
+                    const address = addressMatch[0];
+                    
+                    // Try to call the balance tool
+                     const tools = mcpContext.availableTools || [];
+                     const balanceTool = tools.find((tool: any) => 
+                       tool.name.toLowerCase().includes('balance') || 
+                       tool.name.toLowerCase().includes('account')
+                     );
+                     
+                     if (balanceTool) {
+                       try {
+                         const result = await mcpClient.callTool({
+                           toolName: balanceTool.name,
+                           serverName: mcpContext.serverId,
+                           arguments: { address: address }
+                         });
+                         response = `Here's the balance information for address ${address}:\n\n${JSON.stringify(result, null, 2)}`;
+                       } catch (toolError) {
+                         console.error('Tool call error:', toolError);
+                         response = `I tried to check the balance for ${address}, but encountered an error: ${toolError instanceof Error ? toolError.message : String(toolError)}. The sei-mcp-server might need proper configuration or the address format might be incorrect.`;
+                       }
+                     } else {
+                       response = `I can help you check the Sei balance for ${address}, but I don't see a balance checking tool available in the sei-mcp-server. Available tools: ${tools.map((t: { name: string }) => t.name).join(', ')}`;
+                     }
+                  } else {
+                    response = "I can help you check Sei balances, but I need a valid address (starting with 0x). Please provide a valid Sei address.";
+                  }
+                } else {
+                  response = `I'm connected to the Sei MCP server and can help with blockchain operations. Available tools: ${mcpContext.availableTools?.map(t => t.name).join(', ') || 'None'}. What would you like me to help you with?`;
+                }
+              }
+              // Handle filesystem queries
+               else if (mcpContext.serverId === 'filesystem-server') {
+                 response = `I'm connected to the filesystem server and can help with file operations. Available tools: ${mcpContext.availableTools?.map((t: any) => t.name).join(', ') || 'None'}. What file operation would you like me to perform?`;
+               }
+               // Handle memory queries
+               else if (mcpContext.serverId === 'memory-server') {
+                 response = `I'm connected to the memory server and can help with data storage and retrieval. Available tools: ${mcpContext.availableTools?.map((t: any) => t.name).join(', ') || 'None'}. What would you like me to remember or recall?`;
+               }
+               else {
+                 response = `I'm connected to ${mcpContext.serverName} with ${mcpContext.availableTools?.length || 0} available tools. How can I help you?`;
+               }
+            } catch (error) {
+              console.error('MCP context processing error:', error);
+              response = `I encountered an error while processing your request with ${mcpContext.serverName}: ${error instanceof Error ? error.message : String(error)}`;
+            }
+          }
+          // Handle general queries without specific MCP context
+          else if (lowerMessage.includes('list tools') || lowerMessage.includes('available tools')) {
+            const tools = await mcpClient.getAllTools();
             if (tools.length > 0) {
               response = `I have access to ${tools.length} tools across ${mcpClient.getConnectedServers().length} MCP servers:\n\n`;
               tools.forEach(tool => {
@@ -169,21 +234,14 @@ export async function POST(request: NextRequest) {
           } else if (lowerMessage.includes('server status') || lowerMessage.includes('mcp status')) {
             const status = mcpClient.getStatus();
             response = `MCP Status:\n• Connected servers: ${status.connectedServers}\n• Total tools: ${status.totalTools}\n• Servers: ${status.servers.map(s => `${s.name} (${s.connected ? 'connected' : 'disconnected'})`).join(', ')}`;
-          } else if (lowerMessage.includes('call tool') || lowerMessage.includes('use tool')) {
-            // Extract tool name and arguments (simplified parsing)
-            const tools = mcpClient.getAllTools();
-            if (tools.length > 0) {
-              response = `I can call these tools for you: ${tools.map(t => t.name).join(', ')}. Please specify which tool you'd like me to use and with what parameters.`;
-            } else {
-              response = "No tools are currently available. Please check the MCP server connections.";
-            }
           } else {
             // Generate contextual response based on message content
             response = getRandomElizaResponse(message);
             
             // Add MCP context if relevant
             if (mcpClient.getConnectedServers().length > 0) {
-              response += `\n\n*I'm connected to ${mcpClient.getConnectedServers().length} MCP server(s) and have access to ${mcpClient.getAllTools().length} tools to assist you.*`;
+              const tools = await mcpClient.getAllTools();
+              response += `\n\n*I'm connected to ${mcpClient.getConnectedServers().length} MCP server(s) and have access to ${tools.length} tools to assist you.*`;
             }
           }
           

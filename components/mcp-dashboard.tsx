@@ -61,6 +61,7 @@ import {
   Trash2,
   Users,
   Workflow,
+  Wrench,
   XCircle,
   Zap,
 } from "lucide-react";
@@ -148,6 +149,12 @@ interface MCPSecurityRule {
   violations: number;
 }
 
+interface MCPTool {
+  name: string;
+  description?: string;
+  serverName: string;
+}
+
 const MCPDashboard: React.FC = () => {
   // State management
   const [activeTab, setActiveTab] = useState("overview");
@@ -172,7 +179,11 @@ const MCPDashboard: React.FC = () => {
     name: "",
     command: "",
     args: "",
+    env: [{ key: "", value: "" }],
   });
+  const [showToolsModal, setShowToolsModal] = useState(false);
+  const [selectedServerTools, setSelectedServerTools] = useState<MCPTool[]>([]);
+  const [selectedServerName, setSelectedServerName] = useState("");
 
   // Fetch MCP data from API
   const fetchMCPData = useCallback(async () => {
@@ -358,6 +369,30 @@ const MCPDashboard: React.FC = () => {
         return "text-gray-600 bg-gray-50";
     }
   };
+
+  // Fetch tools for a specific server
+  const fetchServerTools = useCallback(async (serverName: string) => {
+    try {
+      const response = await fetch("/api/mcp/status");
+      const result = await response.json();
+
+      if (result.success && result.data.allTools) {
+        const serverTools = result.data.allTools.filter(
+          (tool: MCPTool) => tool.serverName === serverName
+        );
+        setSelectedServerTools(serverTools);
+        setSelectedServerName(serverName);
+        setShowToolsModal(true);
+      }
+    } catch (error) {
+      console.error("Error fetching server tools:", error);
+    }
+  }, []);
+
+  // Handle show tools for server
+  const handleShowServerTools = useCallback((serverName: string) => {
+    fetchServerTools(serverName);
+  }, [fetchServerTools]);
 
   if (isLoading) {
     return (
@@ -603,7 +638,7 @@ const MCPDashboard: React.FC = () => {
                   Add Server
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-md w-full mx-4">
                 <DialogHeader>
                   <DialogTitle>Add MCP Server</DialogTitle>
                   <DialogDescription>
@@ -653,18 +688,84 @@ const MCPDashboard: React.FC = () => {
                       }
                     />
                   </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label>Environment Variables</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setNewServerForm((prev) => ({
+                            ...prev,
+                            env: [...prev.env, { key: "", value: "" }],
+                          }))
+                        }
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {newServerForm.env.map((envVar, index) => (
+                        <div key={index} className="flex gap-2 items-center">
+                          <Input
+                            placeholder="Key"
+                            value={envVar.key}
+                            onChange={(e) => {
+                              const newEnv = [...newServerForm.env];
+                              newEnv[index].key = e.target.value;
+                              setNewServerForm((prev) => ({ ...prev, env: newEnv }));
+                            }}
+                            className="flex-1"
+                          />
+                          <Input
+                            placeholder="Value"
+                            value={envVar.value}
+                            onChange={(e) => {
+                              const newEnv = [...newServerForm.env];
+                              newEnv[index].value = e.target.value;
+                              setNewServerForm((prev) => ({ ...prev, env: newEnv }));
+                            }}
+                            className="flex-1"
+                          />
+                          {newServerForm.env.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const newEnv = newServerForm.env.filter((_, i) => i !== index);
+                                setNewServerForm((prev) => ({ ...prev, env: newEnv }));
+                              }}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                   <Button
                     className="w-full"
                     onClick={async () => {
                       if (newServerForm.name && newServerForm.command) {
+                        // Parse environment variables from array format
+                        const envVars: Record<string, string> = {};
+                        newServerForm.env.forEach(envVar => {
+                          if (envVar.key.trim() && envVar.value.trim()) {
+                            envVars[envVar.key.trim()] = envVar.value.trim();
+                          }
+                        });
+
                         await handleServerAction("connect", undefined, {
                           name: newServerForm.name,
                           command: newServerForm.command,
                           args: newServerForm.args
                             .split(" ")
                             .filter((arg) => arg.trim()),
+                          env: Object.keys(envVars).length > 0 ? envVars : undefined,
                         });
-                        setNewServerForm({ name: "", command: "", args: "" });
+                        setNewServerForm({ name: "", command: "", args: "", env: [{ key: "", value: "" }] });
                         setAddServerDialogOpen(false);
                       }
                     }}
@@ -700,8 +801,13 @@ const MCPDashboard: React.FC = () => {
                       <Badge className={getStatusColor(server.status)}>
                         {server.status}
                       </Badge>
-                      <Button variant="outline" size="sm">
-                        <Settings className="h-4 w-4" />
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleShowServerTools(server.name)}
+                        title={`Show tools for ${server.name}`}
+                      >
+                        <Wrench className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -747,6 +853,42 @@ const MCPDashboard: React.FC = () => {
             ))}
           </div>
         </TabsContent>
+
+        {/* MCP Tools Modal */}
+        <Dialog open={showToolsModal} onOpenChange={setShowToolsModal}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                MCP Tools - {selectedServerName}
+              </DialogTitle>
+              <DialogDescription>
+                Available tools from the {selectedServerName} server
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {selectedServerTools.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">
+                  No tools available for this server.
+                </p>
+              ) : (
+                <div className="grid gap-4">
+                  {selectedServerTools.map((tool, index) => (
+                    <Card key={`${tool.serverName}-${tool.name}-${index}`}>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">{tool.name}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground">
+                          {tool.description || "No description available"}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Workflows Tab */}
         <TabsContent value="workflows" className="space-y-4">

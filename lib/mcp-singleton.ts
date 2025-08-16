@@ -28,8 +28,6 @@ class MCPClientSingleton {
     global.__SOLMIX_MCP_CLIENT__ = value || undefined;
   }
 
-
-
   private static get initPromise(): Promise<MCPClient> | null {
     return (
       (global as any)[MCP_PROMISE_SYMBOL] ||
@@ -46,49 +44,60 @@ class MCPClientSingleton {
   static async getInstance(): Promise<MCPClient> {
     const instanceId = Math.random().toString(36).substr(2, 9);
     const stack = new Error().stack;
-    const caller = stack?.split('\n')[2]?.trim() || 'unknown';
+    const caller = stack?.split("\n")[2]?.trim() || "unknown";
     console.log(`[SINGLETON-${instanceId}] getInstance called from: ${caller}`);
-    
+
     // Check if we already have a valid instance
     if (this.instance && !this.instance.isDestroyed) {
-      console.log(`[SINGLETON-${instanceId}] Returning existing instance ${this.instance.instanceId}`);
+      console.log(
+        `[SINGLETON-${instanceId}] Returning existing instance ${this.instance.instanceId}`
+      );
       return this.instance;
     }
 
     // Check if we're already initializing - wait for the existing promise
     if (this.initPromise) {
-      console.log(`[SINGLETON-${instanceId}] Already initializing, waiting for existing promise`);
+      console.log(
+        `[SINGLETON-${instanceId}] Already initializing, waiting for existing promise`
+      );
       return this.initPromise;
     }
 
     // Double-check with isInitializing flag to prevent race conditions
     if (this.isInitializing) {
-      console.log(`[SINGLETON-${instanceId}] Another thread is initializing, waiting...`);
+      console.log(
+        `[SINGLETON-${instanceId}] Another thread is initializing, waiting...`
+      );
       // Wait a bit and try again
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       return this.getInstance();
     }
 
     // Start initialization - set flag immediately
     this.isInitializing = true;
     console.log(`[SINGLETON-${instanceId}] Starting initialization`);
-    
+
     // Create and store the promise IMMEDIATELY to prevent race conditions
     this.initPromise = this.createAndInitialize(instanceId)
       .then((client) => {
         this.instance = client;
         this.initPromise = null;
         this.isInitializing = false;
-        console.log(`[SINGLETON-${instanceId}] Initialization completed successfully`);
+        console.log(
+          `[SINGLETON-${instanceId}] Initialization completed successfully`
+        );
         return client;
       })
       .catch((error) => {
-        console.error(`[SINGLETON-${instanceId}] Initialization failed:`, error);
+        console.error(
+          `[SINGLETON-${instanceId}] Initialization failed:`,
+          error
+        );
         this.initPromise = null;
         this.isInitializing = false;
         throw error; // Re-throw the error instead of creating a mock client
       });
-    
+
     console.log(`[SINGLETON-${instanceId}] Promise stored, returning promise`);
     return this.initPromise;
   }
@@ -116,15 +125,12 @@ class MCPClientSingleton {
         },
       },
       {
-        name: "seitrace-server",
+        name: "sei-mcp-server",
         command: "npx",
-        args: ["-y", "@seitrace/mcp"],
+        args: ["-y", "@sei-js/mcp-server"],
         env: {
           NODE_ENV: "development",
-          SECRET_APIKEY: process.env.SEITRACE_API_KEY || "",
-          API_BASE_URL:
-            process.env.SEITRACE_API_BASE_URL ||
-            "https://seitrace.com/insights",
+          PRIVATE_KEY: process.env.SEI_PRIVATE_KEY || "your_private_key_here",
         },
       },
     ];
@@ -147,7 +153,7 @@ class MCPClientSingleton {
   }
 
   static reset(): void {
-    console.log('[SINGLETON] Resetting singleton state');
+    console.log("[SINGLETON] Resetting singleton state");
     if (this.instance) {
       this.instance.destroy();
       this.instance = null;

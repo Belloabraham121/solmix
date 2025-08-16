@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
-import { ChevronRight, ChevronDown, Folder, Plus, MoreHorizontal, FileText, FolderPlus } from "lucide-react"
+import { ChevronRight, ChevronDown, Folder, Plus, MoreHorizontal, FileText, FolderPlus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -241,9 +241,10 @@ function FileTreeItem({
 
 interface FileExplorerProps {
   onFileSelect: (file: FileTreeNode) => void
+  onClose?: () => void
 }
 
-export default function FileExplorer({ onFileSelect }: FileExplorerProps) {
+export default function FileExplorer({ onFileSelect, onClose }: FileExplorerProps) {
   const [fileTree, setFileTree] = useState<FileTreeNode[]>([])
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
@@ -369,6 +370,16 @@ export default function FileExplorer({ onFileSelect }: FileExplorerProps) {
           <span className="text-sm font-medium text-slate-300">Explorer</span>
         </div>
         <div className="flex items-center gap-1">
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-slate-400 hover:text-white hover:bg-slate-700"
+              onClick={onClose}
+            >
+              <X className="w-3 h-3" />
+            </Button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
