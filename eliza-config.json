@@ -1,7 +1,7 @@
 {
   "name": "Eliza Agent",
   "description": "AI agent with Google GenAI integration",
-  "plugins": ["@elizaos/plugin-google-genai", "@elizaos/plugin-mcp"],
+  "plugins": ["@elizaos/plugin-google-genai"],
   "settings": {
     "googleGenAI": {
       "apiKey": "${GOOGLE_GENAI_API_KEY}",

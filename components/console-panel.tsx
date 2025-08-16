@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ChevronUp,
   Play,
+  Minimize2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,11 +66,12 @@ export interface TestResult {
 
 interface ConsolePanelProps {
   height: number;
+  onToggleVisibility?: () => void;
 }
 
 
 
-export default function ConsolePanel({ height }: ConsolePanelProps) {
+export default function ConsolePanel({ height, onToggleVisibility }: ConsolePanelProps) {
   const [activeTab, setActiveTab] = useState("terminal");
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [debuggerEntries, setDebuggerEntries] = useState<DebuggerEntry[]>([]);
@@ -456,6 +458,17 @@ export default function ConsolePanel({ height }: ConsolePanelProps) {
                 <Download className="w-3 h-3" />
               </Button>
             </>
+          )}
+          {onToggleVisibility && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onToggleVisibility}
+              className="h-6 w-6 p-0 text-slate-400 hover:text-white hover:bg-slate-700"
+              title="Hide Terminal"
+            >
+              <Minimize2 className="w-3 h-3" />
+            </Button>
           )}
         </div>
       </div>

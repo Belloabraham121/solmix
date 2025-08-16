@@ -23,6 +23,8 @@ export default function Solmix() {
   const [isResizing, setIsResizing] = useState(false);
   const [isVerticalResizing, setIsVerticalResizing] = useState(false);
   const [activeRightTab, setActiveRightTab] = useState("compiler");
+  const [isFileExplorerVisible, setIsFileExplorerVisible] = useState(true);
+  const [isConsoleVisible, setIsConsoleVisible] = useState(true);
   const resizeRef = useRef<HTMLDivElement>(null);
   const verticalResizeRef = useRef<HTMLDivElement>(null);
 
@@ -50,22 +52,35 @@ export default function Solmix() {
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
+      e.stopPropagation();
       setIsResizing(true);
 
       const startX = e.clientX;
       const startWidth = compilerWidth;
 
       const handleMouseMove = (e: MouseEvent) => {
-        const deltaX = startX - e.clientX; // Reverse direction since we're resizing from left edge
-        const newWidth = Math.min(Math.max(startWidth + deltaX, 250), 600); // Min 250px, Max 600px
+        e.preventDefault();
+        const deltaX = e.clientX - startX; // How much mouse moved from start position
+        // For right sidebar with left edge handle:
+        // Drag LEFT (negative deltaX) = make panel WIDER (increase width)
+        // Drag RIGHT (positive deltaX) = make panel NARROWER (decrease width)
+        // This is because we're dragging the left boundary of a right-aligned panel
+        const newWidth = Math.min(Math.max(startWidth - deltaX, 250), 600);
         setCompilerWidth(newWidth);
       };
 
-      const handleMouseUp = () => {
+      const handleMouseUp = (e: MouseEvent) => {
+        e.preventDefault();
         setIsResizing(false);
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
       };
+
+      // Prevent text selection during resize
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
 
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
@@ -76,22 +91,31 @@ export default function Solmix() {
   const handleVerticalMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
+      e.stopPropagation();
       setIsVerticalResizing(true);
 
       const startY = e.clientY;
       const startHeight = consoleHeight;
 
       const handleMouseMove = (e: MouseEvent) => {
+        e.preventDefault();
         const deltaY = startY - e.clientY; // Reverse direction since we're resizing from top edge
         const newHeight = Math.min(Math.max(startHeight + deltaY, 100), 500); // Min 100px, Max 500px
         setConsoleHeight(newHeight);
       };
 
-      const handleMouseUp = () => {
+      const handleMouseUp = (e: MouseEvent) => {
+        e.preventDefault();
         setIsVerticalResizing(false);
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
       };
+
+      // Prevent text selection during resize
+      document.body.style.cursor = "row-resize";
+      document.body.style.userSelect = "none";
 
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
@@ -139,18 +163,32 @@ export default function Solmix() {
       />
 
       <div className="flex items-center justify-between">
-        <IDEToolbar onCompile={handleCompile} />
+        <IDEToolbar
+          onCompile={handleCompile}
+          onToggleFileExplorer={() =>
+            setIsFileExplorerVisible(!isFileExplorerVisible)
+          }
+          isFileExplorerVisible={isFileExplorerVisible}
+        />
         <div className="px-4">
-          <StatusBar />
+          <StatusBar
+            isConsoleVisible={isConsoleVisible}
+            onShowConsole={() => setIsConsoleVisible(true)}
+          />
         </div>
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar - File Explorer */}
-        <aside className="w-64 bg-slate-850 border-r border-slate-700 flex flex-col">
-          <FileExplorer onFileSelect={handleFileSelect} />
-        </aside>
+        {isFileExplorerVisible && (
+          <aside className="w-64 bg-slate-850 border-r border-slate-700 flex flex-col">
+            <FileExplorer
+              onFileSelect={handleFileSelect}
+              onClose={() => setIsFileExplorerVisible(false)}
+            />
+          </aside>
+        )}
 
         {/* Editor Area */}
         <main className="flex-1 flex flex-col">
@@ -175,11 +213,12 @@ export default function Solmix() {
           <div
             ref={resizeRef}
             className={cn(
-              "absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-orange-500/50 transition-colors",
+              "absolute left-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-orange-500/50 transition-colors z-50",
               "group flex items-center justify-center",
               isResizing && "bg-orange-500"
             )}
             onMouseDown={handleMouseDown}
+            style={{ marginLeft: "-4px" }}
           >
             <div className="w-0.5 h-8 bg-slate-600 group-hover:bg-orange-500 transition-colors" />
           </div>
@@ -224,21 +263,27 @@ export default function Solmix() {
       </div>
 
       {/* Console Panel */}
-      <div className="relative" style={{ height: `${consoleHeight}px` }}>
-        <div
-          ref={verticalResizeRef}
-          className={cn(
-            "absolute top-0 left-0 right-0 h-1 cursor-row-resize hover:bg-orange-500/50 transition-colors z-10",
-            "group flex items-center justify-center",
-            isVerticalResizing && "bg-orange-500"
-          )}
-          onMouseDown={handleVerticalMouseDown}
-        >
-          <div className="w-8 h-0.5 bg-slate-600 group-hover:bg-orange-500 transition-colors" />
-        </div>
+      {isConsoleVisible && (
+        <div className="relative" style={{ height: `${consoleHeight}px` }}>
+          <div
+            ref={verticalResizeRef}
+            className={cn(
+              "absolute top-0 left-0 right-0 h-2 cursor-row-resize hover:bg-orange-500/50 transition-colors z-50",
+              "group flex items-center justify-center",
+              isVerticalResizing && "bg-orange-500"
+            )}
+            onMouseDown={handleVerticalMouseDown}
+            style={{ marginTop: "-4px" }}
+          >
+            <div className="w-8 h-0.5 bg-slate-600 group-hover:bg-orange-500 transition-colors" />
+          </div>
 
-        <ConsolePanel height={consoleHeight} />
-      </div>
+          <ConsolePanel
+            height={consoleHeight}
+            onToggleVisibility={() => setIsConsoleVisible(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }
