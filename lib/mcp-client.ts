@@ -481,7 +481,10 @@ export class MCPClient extends EventEmitter {
       // Handle stderr for debugging
       connection.process.stderr?.on("data", (data) => {
         const errorOutput = data.toString();
-        console.warn(`${connection.name} stderr:`, errorOutput);
+        // Filter out common MCP initialization messages to reduce noise
+        if (!errorOutput.includes("Client does not support MCP Roots")) {
+          console.warn(`${connection.name} stderr:`, errorOutput);
+        }
 
         // Check for common error patterns
         if (errorOutput.includes("Wallet functionality is disabled")) {

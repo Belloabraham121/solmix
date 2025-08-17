@@ -170,83 +170,174 @@ async function analyzeAndExecuteWorkflow(
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
-    const workflowAnalysisPrompt = `Analyze this user request and determine if it requires multiple MCP tool calls in sequence:
+    const workflowAnalysisPrompt = `You are an AI workflow analyzer for MCP (Model Context Protocol) tools. Your job is to detect multi-step workflows.
 
 User Request: "${message}"
 
-Available MCP Servers and Tools:
-${connectedServers.map((server: any) => `\n${server.name}:`).join('')}
-${allTools.map((tool: any) => `- ${tool.name} (${tool.serverName}): ${tool.description || 'No description'}`).join('\n')}
+Available MCP Tools:
+${allTools.map((tool: any) => `- ${tool.name} (${tool.serverName}): ${tool.description || 'Tool for ' + tool.name.replace(/_/g, ' ')}`).join('\n')}
 
-Analyze if this request requires multiple steps and respond with a JSON object:
+Connected Servers: ${connectedServers.map((server: any) => server.name).join(', ')}
 
+CRITICAL MULTI-STEP PATTERNS TO DETECT:
+
+1. BLOCKCHAIN + FILE OPERATIONS:
+   - "Check balance [address] and log/save/write to [filename]"
+   - "Get wallet info and store/remember as [name]"
+   - Any combination of cryptocurrency/blockchain data retrieval WITH file creation
+
+2. DATA RETRIEVAL + STORAGE:
+   - Fetching information THEN saving it somewhere
+   - Getting data from one system and putting it into another
+
+3. SEQUENTIAL OPERATIONS:
+   - "Do X and then Y"
+   - "Get X, remember as Y, and save to Z"
+   - Multiple actions connected by "and", "then", "also"
+
+EXAMPLE ANALYSIS:
+User says: "Check balance of 0x123... and log results to wallet.json"
+This is CLEARLY multi-step because:
+1. First: get_balance from sei-mcp-server
+2. Then: create_file using the balance data
+
+Your Analysis:
+The user request: "${message}"
+
+Does this request contain:
+- A blockchain/wallet address (0x...)? ${/0x[a-fA-F0-9]{40}/.test(message) ? 'YES' : 'NO'}
+- File-related words (log, save, write, file, json)? ${/(log|save|write|file|json|store|remember)/i.test(message) ? 'YES' : 'NO'}
+- Multiple actions (and, then, also)? ${/(and|then|also|,)/i.test(message) ? 'YES' : 'NO'}
+
+If ANY of these combinations are true, this is likely multi-step:
+- Blockchain address + file words = multi-step
+- Data retrieval + storage words = multi-step
+- Multiple connected actions = multi-step
+
+Respond with JSON only:
+
+For multi-step (when operations depend on each other):
 {
-  "isMultiStep": boolean,
+  "isMultiStep": true,
   "steps": [
     {
       "stepNumber": 1,
-      "action": "description of what to do",
+      "action": "Check wallet balance",
+      "serverName": "sei-mcp-server",
+      "toolName": "get_balance",
+      "arguments": {
+        "address": "extracted address",
+        "network": "sei"
+      },
+      "dependsOn": null,
+      "extractData": "balance information"
+    },
+    {
+      "stepNumber": 2,
+      "action": "Save results to file",
       "serverName": "browser-filesystem-server",
       "toolName": "create_file",
       "arguments": {
-        "path": "filename.extension",
-        "content": "file content here"
+        "path": "filename.json",
+        "content": "{}"
       },
-      "dependsOn": null,
-      "extractData": "what data to extract for next step"
+      "dependsOn": 1,
+      "extractData": null
     }
   ],
-  "reasoning": "explanation of why this workflow is needed"
+  "reasoning": "Request combines blockchain data retrieval with file storage - requires chaining tools"
 }
 
-If this is NOT a multi-step workflow, return: {"isMultiStep": false}
+For single-step (only one operation needed):
+{"isMultiStep": false}
 
-IMPORTANT FILE CREATION RULES:
-- For ANY file creation request (React component, smart contract, configuration file, etc.), use "browser-filesystem-server" and "create_file"
-- Detect file extensions from context: .sol for Solidity, .js/.jsx for JavaScript/React, .ts/.tsx for TypeScript, .md for markdown, .json for JSON, .py for Python, etc.
-- The "path" should be just the filename with proper extension
-- The "content" should be the complete file content based on the user's request
-
-Focus on identifying:
-- File creation/writing operations (CREATE FILES FOR: React components, smart contracts, config files, documentation, etc.)
-- Blockchain operations (balance checks, transactions)
-- Memory operations (remembering, storing data)
-- Any dependencies between operations
-
-EXAMPLES:
-- "Create a React component" → browser-filesystem-server + create_file with .jsx extension
-- "Write a smart contract" → browser-filesystem-server + create_file with .sol extension  
-- "Make a config file" → browser-filesystem-server + create_file with .json extension
-- "Create documentation" → browser-filesystem-server + create_file with .md extension`;
+Be decisive: If the request involves getting data AND doing something with it, return isMultiStep: true.`;
 
     const workflowAnalysis = await model.generateContent(workflowAnalysisPrompt);
     const analysisText = workflowAnalysis.response.text();
     
-    console.log(`[AI Workflow] AI Analysis:`, analysisText);
+    console.log(`[AI Workflow] AI Analysis Response:`, analysisText);
     
     // Parse the AI's workflow analysis
     let workflowPlan;
     try {
       const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
+        console.log(`[AI Workflow] Extracted JSON:`, jsonMatch[0]);
         workflowPlan = JSON.parse(jsonMatch[0]);
       } else {
+        console.log(`[AI Workflow] No JSON found in response, treating as single-step`);
         workflowPlan = { isMultiStep: false };
       }
     } catch (e) {
-      console.log(`[AI Workflow] Failed to parse AI response, treating as single-step`);
-      return { response: "", usedMCP: false, isWorkflow: false };
+      console.log(`[AI Workflow] Failed to parse AI response:`, e);
+      console.log(`[AI Workflow] Raw analysis text:`, analysisText);
+      workflowPlan = { isMultiStep: false };
+    }
+    
+    console.log(`[AI Workflow] Parsed workflow plan:`, JSON.stringify(workflowPlan, null, 2));
+    
+    // Manual pattern-based override if AI fails to detect obvious multi-step patterns
+    const hasEthAddress = /0x[a-fA-F0-9]{40}/.test(message);
+    const hasFileKeywords = /(log|save|write.*file|store|remember|analysis.*json|\.json)/i.test(message);
+    const hasMultipleActions = /(and|then|also|,)/i.test(message);
+    
+    console.log(`[AI Workflow] Pattern Analysis:`);
+    console.log(`  - Has ETH address: ${hasEthAddress}`);
+    console.log(`  - Has file keywords: ${hasFileKeywords}`);
+    console.log(`  - Has multiple actions: ${hasMultipleActions}`);
+    
+    if (!workflowPlan.isMultiStep && hasEthAddress && hasFileKeywords) {
+      console.log(`[AI Workflow] Manual override: Detected blockchain + file pattern, forcing multi-step`);
+      const addressMatch = message.match(/0x[a-fA-F0-9]{40}/);
+      const address = addressMatch ? addressMatch[0] : "";
+      
+      // Extract filename from message
+      const filenameMatch = message.match(/([\w-]+\.json)|([\w-]+\.\w+)/i);
+      const filename = filenameMatch ? filenameMatch[0] : 'wallet_analysis.json';
+      
+      workflowPlan = {
+        isMultiStep: true,
+        steps: [
+          {
+            stepNumber: 1,
+            action: "Check wallet balance",
+            serverName: "sei-mcp-server",
+            toolName: "get_balance",
+            arguments: {
+              address: address,
+              network: "sei"
+            },
+            dependsOn: null,
+            extractData: "balance information"
+          },
+          {
+            stepNumber: 2,
+            action: `Save results to ${filename}`,
+            serverName: "browser-filesystem-server",
+            toolName: "create_file",
+            arguments: {
+              path: filename,
+              content: "{}"
+            },
+            dependsOn: 1,
+            extractData: null
+          }
+        ],
+        reasoning: "Manual override: Request contains blockchain address with file operation keywords"
+      };
+      console.log(`[AI Workflow] Created manual workflow plan:`, JSON.stringify(workflowPlan, null, 2));
     }
     
     if (!workflowPlan.isMultiStep) {
-      console.log(`[AI Workflow] AI determined this is not a multi-step workflow`);
+      console.log(`[AI Workflow] Final determination: Not a multi-step workflow`);
       return { response: "", usedMCP: false, isWorkflow: false };
     }
     
     console.log(`[AI Workflow] Executing multi-step workflow:`, workflowPlan.reasoning);
     
     // Execute the workflow steps
-    const stepResults = {};
+    const stepResults: Record<string, any> = {};
     let finalResponse = `🤖 **AI Workflow Orchestrator**\n\n**Analysis**: ${workflowPlan.reasoning}\n\n**Execution Log**:\n\n`;
     
     for (const step of workflowPlan.steps || []) {
@@ -259,9 +350,50 @@ EXAMPLES:
         
         if (step.dependsOn && stepResults[step.dependsOn as keyof typeof stepResults]) {
           console.log(`[AI Workflow] Step ${step.stepNumber} depends on step ${step.dependsOn}`);
-          console.log(`[AI Workflow] Previous step result:`, JSON.stringify(stepResults[step.dependsOn as keyof typeof stepResults], null, 2));
+          const previousResult = stepResults[step.dependsOn as keyof typeof stepResults];
+          console.log(`[AI Workflow] Previous step result:`, JSON.stringify(previousResult, null, 2));
           
-          resolvedArguments = await resolveDependencies(step.arguments, stepResults[step.dependsOn as keyof typeof stepResults], model);
+          // Special handling for file creation that depends on blockchain data
+          if ((step.serverName === 'filesystem-server' || step.serverName === 'browser-filesystem-server') && 
+              (step.toolName === 'write_file' || step.toolName === 'create_file') &&
+              previousResult.result?.content?.[0]?.text) {
+            
+            console.log(`[AI Workflow] File creation step detected with blockchain data dependency`);
+            
+            // Extract the blockchain data and format it as JSON for the file
+            const blockchainData = previousResult.result.content[0].text;
+            let formattedContent;
+            
+            try {
+              // Try to parse the blockchain data as JSON and reformat it
+              const parsedData = JSON.parse(blockchainData);
+              formattedContent = JSON.stringify({
+                timestamp: new Date().toISOString(),
+                address: resolvedArguments.address || step.arguments.address || "unknown",
+                analysis_type: "wallet_balance",
+                data: parsedData
+              }, null, 2);
+            } catch (e) {
+              // If not valid JSON, create a structured format
+              formattedContent = JSON.stringify({
+                timestamp: new Date().toISOString(),
+                address: resolvedArguments.address || step.arguments.address || "unknown",
+                analysis_type: "wallet_balance",
+                raw_data: blockchainData
+              }, null, 2);
+            }
+            
+            resolvedArguments = {
+              ...step.arguments,
+              content: formattedContent
+            };
+            
+            console.log(`[AI Workflow] Formatted file content:`, formattedContent.substring(0, 200) + '...');
+          } else {
+            // Use AI for general dependency resolution
+            resolvedArguments = await resolveDependencies(step.arguments, previousResult, model);
+          }
+          
           console.log(`[AI Workflow] Step ${step.stepNumber} resolved arguments:`, JSON.stringify(resolvedArguments, null, 2));
         }
         
