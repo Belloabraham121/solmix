@@ -192,7 +192,7 @@ Analyze if this request requires multiple steps and respond with a JSON object:
         "path": "filename.extension",
         "content": "file content here"
       },
-      "dependsOn": null or previous step number,
+      "dependsOn": null,
       "extractData": "what data to extract for next step"
     }
   ],
@@ -282,10 +282,16 @@ EXAMPLES:
             parentId: resolvedArguments.parentId
           };
           
+          // Include the file creation JSON in the final response for the MCP interface to process
+          // Use special delimiters to ensure proper parsing
+          const fileDataJSON = JSON.stringify(fileData);
+          console.log(`[AI Workflow] Generated file creation JSON:`, fileDataJSON);
+          finalResponse += `\n\n---FILE_CREATION_START---\n${fileDataJSON}\n---FILE_CREATION_END---\n\n`;
+          
           toolResult = {
             content: [{
               type: 'text',
-              text: JSON.stringify(fileData)
+              text: 'File operation prepared for browser'
             }],
             isError: false,
             fileCreation: fileData // Add special marker for file creation

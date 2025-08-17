@@ -380,12 +380,12 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || !isElizaConnected || !elizaAgent) return;
 
-    const userMessage: MCPMessage = {
-      id: Date.now().toString(),
-      type: "user",
-      content: inputMessage,
-      timestamp: new Date(),
-    };
+      const userMessage: MCPMessage = {
+        id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: "user",
+        content: inputMessage,
+        timestamp: new Date(),
+      };
 
     setMessages((prev) => [...prev, userMessage]);
     const messageToSend = inputMessage;
@@ -411,7 +411,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
 
           // Add routing notification message
           const routingNotification: MCPMessage = {
-            id: (Date.now() - 1).toString(),
+            id: `system-routing-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             type: "system",
             content: routingMessage,
             timestamp: new Date(),
@@ -517,14 +517,30 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
   // Function to handle file creation from AI orchestrator response
   const handleFileCreationFromResponse = async (response: string) => {
     try {
-      // Look for JSON patterns that indicate file creation
-      const jsonPattern = /\{[\s\S]*?"action"\s*:\s*["']create_browser_file["'][\s\S]*?\}/g;
-      const matches = response.match(jsonPattern);
+      // Look for file creation delimiters in the response
+      const startDelimiter = '---FILE_CREATION_START---';
+      const endDelimiter = '---FILE_CREATION_END---';
       
-      if (matches) {
-        for (const match of matches) {
+      console.log('[FILE CREATION] Response text:', response.substring(0, 500) + '...');
+      
+      let startIndex = response.indexOf(startDelimiter);
+      let foundCount = 0;
+      
+      while (startIndex !== -1) {
+        const endIndex = response.indexOf(endDelimiter, startIndex);
+        
+        if (endIndex !== -1) {
+          // Extract JSON between delimiters
+          const jsonString = response.substring(
+            startIndex + startDelimiter.length,
+            endIndex
+          ).trim();
+          
+          foundCount++;
+          console.log(`[FILE CREATION] Found file creation data ${foundCount}:`, jsonString);
+          
           try {
-            const fileData = JSON.parse(match);
+            const fileData = JSON.parse(jsonString);
             
             if (fileData.action === 'create_browser_file') {
               console.log('[FILE CREATION] Processing file creation:', fileData);
@@ -587,7 +603,12 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
             console.log('[FILE CREATION] Failed to parse file creation data:', parseError);
           }
         }
+        
+        // Look for next occurrence
+        startIndex = response.indexOf(startDelimiter, endIndex + endDelimiter.length);
       }
+      
+      console.log(`[FILE CREATION] Processing complete. Found ${foundCount} file creation instructions.`);
     } catch (error) {
       console.error('[FILE CREATION] Error handling file creation:', error);
     }
