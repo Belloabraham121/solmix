@@ -1,35 +1,53 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useRef, useEffect } from "react"
-import { ChevronRight, ChevronDown, Folder, Plus, MoreHorizontal, FileText, FolderPlus, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import type React from "react";
+import { useState, useRef, useEffect } from "react";
+import {
+  ChevronRight,
+  ChevronDown,
+  Folder,
+  Plus,
+  MoreHorizontal,
+  FileText,
+  FolderPlus,
+  X,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { cn } from "@/lib/utils"
-import FileIcon from "@/components/ui/file-icon"
-import SearchInput from "@/components/ui/search-input"
-import { fileSystem, type FileNode, type FileTreeNode } from "@/lib/file-system"
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import FileIcon from "@/components/ui/file-icon";
+import SearchInput from "@/components/ui/search-input";
+import {
+  fileSystem,
+  type FileNode,
+  type FileTreeNode,
+} from "@/lib/file-system";
 
 interface FileTreeItemProps {
-  node: FileTreeNode
-  level: number
-  onToggle: (id: string) => void
-  onSelect: (node: FileTreeNode) => void
-  onRename: (id: string, newName: string) => void
-  onDelete: (id: string) => void
-  onCreateFile: (parentId: string) => void
-  onCreateFolder: (parentId: string) => void
-  onMoveFile: (fileId: string, newParentId?: string) => void
-  selectedFile: string | null
-  expandedFolders: Set<string>
+  node: FileTreeNode;
+  level: number;
+  onToggle: (id: string) => void;
+  onSelect: (node: FileTreeNode) => void;
+  onRename: (id: string, newName: string) => void;
+  onDelete: (id: string) => void;
+  onCreateFile: (parentId: string) => void;
+  onCreateFolder: (parentId: string) => void;
+  onMoveFile: (fileId: string, newParentId?: string) => void;
+  selectedFile: string | null;
+  expandedFolders: Set<string>;
 }
 
 function FileTreeItem({
@@ -45,91 +63,94 @@ function FileTreeItem({
   selectedFile,
   expandedFolders,
 }: FileTreeItemProps) {
-  const [isRenaming, setIsRenaming] = useState(false)
-  const [newName, setNewName] = useState(node.name)
-  const [isDragOver, setIsDragOver] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [newName, setNewName] = useState(node.name);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isRenaming && inputRef.current) {
-      inputRef.current.focus()
-      inputRef.current.select()
+      inputRef.current.focus();
+      inputRef.current.select();
     }
-  }, [isRenaming])
+  }, [isRenaming]);
 
   const handleRename = () => {
-    setIsRenaming(true)
-  }
+    setIsRenaming(true);
+  };
 
   const handleRenameSubmit = () => {
     if (newName.trim() && newName !== node.name) {
-      onRename(node.id, newName.trim())
+      onRename(node.id, newName.trim());
     }
-    setIsRenaming(false)
-    setNewName(node.name)
-  }
+    setIsRenaming(false);
+    setNewName(node.name);
+  };
 
   const handleRenameCancel = () => {
-    setIsRenaming(false)
-    setNewName(node.name)
-  }
+    setIsRenaming(false);
+    setNewName(node.name);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      e.preventDefault()
-      handleRenameSubmit()
+      e.preventDefault();
+      handleRenameSubmit();
     } else if (e.key === "Escape") {
-      e.preventDefault()
-      handleRenameCancel()
+      e.preventDefault();
+      handleRenameCancel();
     }
-  }
+  };
 
   const handleInputBlur = (e: React.FocusEvent) => {
     // Only submit if the blur wasn't caused by pressing Escape
-    if (!e.relatedTarget || !e.relatedTarget.closest('.dropdown-menu')) {
-      handleRenameSubmit()
+    if (!e.relatedTarget || !e.relatedTarget.closest(".dropdown-menu")) {
+      handleRenameSubmit();
     }
-  }
+  };
 
-  const isExpanded = expandedFolders.has(node.id)
+  const isExpanded = expandedFolders.has(node.id);
 
   const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData('text/plain', node.id)
-    e.dataTransfer.effectAllowed = 'move'
-  }
+    e.dataTransfer.setData("text/plain", node.id);
+    e.dataTransfer.effectAllowed = "move";
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
-    if (node.type === 'folder') {
-      e.preventDefault()
-      e.dataTransfer.dropEffect = 'move'
-      setIsDragOver(true)
+    if (node.type === "folder") {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      setIsDragOver(true);
     }
-  }
+  };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    if (node.type === 'folder') {
-      setIsDragOver(false)
+    if (node.type === "folder") {
+      setIsDragOver(false);
     }
-  }
+  };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    if (node.type === 'folder') {
-      const draggedFileId = e.dataTransfer.getData('text/plain')
+    e.preventDefault();
+    if (node.type === "folder") {
+      const draggedFileId = e.dataTransfer.getData("text/plain");
       if (draggedFileId && draggedFileId !== node.id) {
-        onMoveFile(draggedFileId, node.id)
+        onMoveFile(draggedFileId, node.id);
       }
-      setIsDragOver(false)
+      setIsDragOver(false);
     }
-  }
+  };
 
   return (
     <div>
       <div
         className={cn(
           "flex items-center gap-1 py-1 px-2 rounded cursor-pointer hover:bg-slate-700 group",
-          selectedFile === node.id && "bg-slate-700 border-l-2 border-orange-500",
-          isDragOver && node.type === 'folder' && "bg-blue-600/20 border-blue-400",
+          selectedFile === node.id &&
+            "bg-slate-700 border-l-2 border-orange-500",
+          isDragOver &&
+            node.type === "folder" &&
+            "bg-blue-600/20 border-blue-400"
         )}
         style={{ paddingLeft: `${level * 12 + 8}px` }}
         onClick={() => onSelect(node)}
@@ -142,8 +163,8 @@ function FileTreeItem({
         {node.type === "folder" && (
           <button
             onClick={(e) => {
-              e.stopPropagation()
-              onToggle(node.id)
+              e.stopPropagation();
+              onToggle(node.id);
             }}
             className="p-0.5 hover:bg-slate-600 rounded"
           >
@@ -156,7 +177,11 @@ function FileTreeItem({
         )}
         {node.type === "file" && <div className="w-4" />}
 
-        <FileIcon extension={node.extension} isFolder={node.type === "folder"} isOpen={isExpanded} />
+        <FileIcon
+          extension={node.extension}
+          isFolder={node.type === "folder"}
+          isOpen={isExpanded}
+        />
 
         {isRenaming ? (
           <Input
@@ -168,7 +193,9 @@ function FileTreeItem({
             className="h-6 text-sm bg-slate-800 border-slate-600 text-slate-100"
           />
         ) : (
-          <span className="text-sm text-slate-300 flex-1 truncate">{node.name}</span>
+          <span className="text-sm text-slate-300 flex-1 truncate">
+            {node.name}
+          </span>
         )}
 
         <DropdownMenu>
@@ -201,7 +228,10 @@ function FileTreeItem({
                 <DropdownMenuSeparator className="bg-slate-700" />
               </>
             )}
-            <DropdownMenuItem onClick={handleRename} className="text-slate-300 hover:bg-slate-700 hover:text-white">
+            <DropdownMenuItem
+              onClick={handleRename}
+              className="text-slate-300 hover:bg-slate-700 hover:text-white"
+            >
               Rename
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-slate-700" />
@@ -236,130 +266,143 @@ function FileTreeItem({
         </div>
       )}
     </div>
-  )
+  );
 }
 
 interface FileExplorerProps {
-  onFileSelect: (file: FileTreeNode) => void
-  onClose?: () => void
+  onFileSelect: (file: FileTreeNode) => void;
+  onClose?: () => void;
 }
 
-export default function FileExplorer({ onFileSelect, onClose }: FileExplorerProps) {
-  const [fileTree, setFileTree] = useState<FileTreeNode[]>([])
-  const [selectedFile, setSelectedFile] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(["contracts", "scripts"]))
-  const [showNewFileDialog, setShowNewFileDialog] = useState(false)
-  const [showNewFolderDialog, setShowNewFolderDialog] = useState(false)
-  const [newFileName, setNewFileName] = useState("")
-  const [newFolderName, setNewFolderName] = useState("")
-  const [selectedFileType, setSelectedFileType] = useState<"sol" | "js">("sol")
-  const [currentParentId, setCurrentParentId] = useState<string | undefined>(undefined)
-  const [isMounted, setIsMounted] = useState(false)
+export default function FileExplorer({
+  onFileSelect,
+  onClose,
+}: FileExplorerProps) {
+  const [fileTree, setFileTree] = useState<FileTreeNode[]>([]);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set(["contracts", "scripts"])
+  );
+  const [showNewFileDialog, setShowNewFileDialog] = useState(false);
+  const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
+  const [newFileName, setNewFileName] = useState("");
+  const [newFolderName, setNewFolderName] = useState("");
+  const [selectedFileType, setSelectedFileType] = useState<"sol" | "js">("sol");
+  const [currentParentId, setCurrentParentId] = useState<string | undefined>(
+    undefined
+  );
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true)
-    loadFiles()
-  }, [])
+    setIsMounted(true);
+    loadFiles();
+  }, []);
 
   const loadFiles = () => {
-    const tree = fileSystem.getFileTree()
-    setFileTree(tree)
-  }
+    const tree = fileSystem.getFileTree();
+    setFileTree(tree);
+  };
 
   const createNewFile = () => {
-    if (!newFileName.trim()) return
+    if (!newFileName.trim()) return;
 
-    const fileName = newFileName.trim()
-    const extension = selectedFileType
-    const fullName = fileName.endsWith(`.${extension}`) ? fileName : `${fileName}.${extension}`
+    const fileName = newFileName.trim();
+    const extension = selectedFileType;
+    const fullName = fileName.endsWith(`.${extension}`)
+      ? fileName
+      : `${fileName}.${extension}`;
 
-    const newFile = fileSystem.createFile(fullName, currentParentId, extension)
+    const newFile = fileSystem.createFile(fullName, currentParentId, extension);
 
-    loadFiles() // Refresh the tree
-    setNewFileName("")
-    setShowNewFileDialog(false)
-    setCurrentParentId(undefined)
+    loadFiles(); // Refresh the tree
+    setNewFileName("");
+    setShowNewFileDialog(false);
+    setCurrentParentId(undefined);
 
     // Select the new file - convert to FileTreeNode
-    const { children, ...fileTreeNode } = newFile
-    setSelectedFile(newFile.id)
-    onFileSelect(fileTreeNode)
-  }
+    const { children, ...fileTreeNode } = newFile;
+    setSelectedFile(newFile.id);
+    onFileSelect(fileTreeNode);
+  };
 
   const createNewFolder = () => {
-    if (!newFolderName.trim()) return
+    if (!newFolderName.trim()) return;
 
-    fileSystem.createFolder(newFolderName.trim(), currentParentId)
+    fileSystem.createFolder(newFolderName.trim(), currentParentId);
 
-    loadFiles() // Refresh the tree
-    setNewFolderName("")
-    setShowNewFolderDialog(false)
-    setCurrentParentId(undefined)
-  }
+    loadFiles(); // Refresh the tree
+    setNewFolderName("");
+    setShowNewFolderDialog(false);
+    setCurrentParentId(undefined);
+  };
 
   const toggleFolder = (id: string) => {
     setExpandedFolders((prev) => {
-      const newSet = new Set(prev)
+      const newSet = new Set(prev);
       if (newSet.has(id)) {
-        newSet.delete(id)
+        newSet.delete(id);
       } else {
-        newSet.add(id)
+        newSet.add(id);
       }
-      return newSet
-    })
-  }
+      return newSet;
+    });
+  };
 
   const handleFileSelect = (node: FileTreeNode) => {
     if (node.type === "file") {
-      setSelectedFile(node.id)
-      onFileSelect(node)
+      setSelectedFile(node.id);
+      onFileSelect(node);
     } else if (node.type === "folder") {
-      toggleFolder(node.id)
+      toggleFolder(node.id);
     }
-  }
+  };
 
   const handleMoveFile = (fileId: string, newParentId?: string) => {
-    const success = fileSystem.moveFile(fileId, newParentId)
+    const success = fileSystem.moveFile(fileId, newParentId);
     if (success) {
-      loadFiles() // Refresh the tree
+      loadFiles(); // Refresh the tree
     }
-  }
+  };
 
   const handleRename = (id: string, newName: string) => {
-    fileSystem.renameFile(id, newName)
-    loadFiles() // Refresh the tree
-  }
+    fileSystem.renameFile(id, newName);
+    loadFiles(); // Refresh the tree
+  };
 
   const handleDelete = (id: string) => {
-    fileSystem.deleteFile(id)
-    loadFiles() // Refresh the tree
+    fileSystem.deleteFile(id);
+    loadFiles(); // Refresh the tree
 
     if (selectedFile === id) {
-      setSelectedFile(null)
+      setSelectedFile(null);
     }
-  }
+  };
 
   const handleCreateFile = (parentId?: string) => {
-    setCurrentParentId(parentId)
-    setShowNewFileDialog(true)
-  }
+    setCurrentParentId(parentId);
+    setShowNewFileDialog(true);
+  };
 
   const handleCreateFolder = (parentId?: string) => {
-    setCurrentParentId(parentId)
-    setShowNewFolderDialog(true)
-  }
+    setCurrentParentId(parentId);
+    setShowNewFolderDialog(true);
+  };
 
-  const filteredFiles = searchQuery ? fileTree.filter(node => 
-    node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (node.children && node.children.some(child => 
-      child.name.toLowerCase().includes(searchQuery.toLowerCase())
-    ))
-  ) : fileTree
+  const filteredFiles = searchQuery
+    ? fileTree.filter(
+        (node) =>
+          node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (node.children &&
+            node.children.some((child) =>
+              child.name.toLowerCase().includes(searchQuery.toLowerCase())
+            ))
+      )
+    : fileTree;
 
-  const allFiles = Object.values(fileSystem.getAllFiles())
-  const fileCount = allFiles.filter((f) => f.type === "file").length
-  const folderCount = allFiles.filter((f) => f.type === "folder").length
+  const allFiles = Object.values(fileSystem.getAllFiles());
+  const fileCount = allFiles.filter((f) => f.type === "file").length;
+  const folderCount = allFiles.filter((f) => f.type === "folder").length;
 
   return (
     <div className="flex flex-col h-full">
@@ -411,23 +454,27 @@ export default function FileExplorer({ onFileSelect, onClose }: FileExplorerProp
       </div>
 
       <div className="p-2 border-b border-slate-700">
-        <SearchInput placeholder="Search files..." value={searchQuery} onChange={setSearchQuery} />
+        <SearchInput
+          placeholder="Search files..."
+          value={searchQuery}
+          onChange={setSearchQuery}
+        />
       </div>
 
       {/* File Tree */}
-      <div 
+      <div
         className="flex-1 overflow-auto"
         onDragOver={(e) => {
-          e.preventDefault()
-          e.dataTransfer.dropEffect = 'move'
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
         }}
         onDrop={(e) => {
-           e.preventDefault()
-           const draggedFileId = e.dataTransfer.getData('text/plain')
-           if (draggedFileId) {
-             handleMoveFile(draggedFileId) // Move to root
-           }
-         }}
+          e.preventDefault();
+          const draggedFileId = e.dataTransfer.getData("text/plain");
+          if (draggedFileId) {
+            handleMoveFile(draggedFileId); // Move to root
+          }
+        }}
       >
         <div className="p-1">
           {(searchQuery ? filteredFiles : fileTree).map((node) => (
@@ -459,11 +506,15 @@ export default function FileExplorer({ onFileSelect, onClose }: FileExplorerProp
       <Dialog open={showNewFileDialog} onOpenChange={setShowNewFileDialog}>
         <DialogContent className="bg-slate-800 border-slate-700">
           <DialogHeader>
-            <DialogTitle className="text-slate-100">Create New File</DialogTitle>
+            <DialogTitle className="text-slate-100">
+              Create New File
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-slate-300 mb-2 block">File Name</label>
+              <label className="text-sm text-slate-300 mb-2 block">
+                File Name
+              </label>
               <Input
                 value={newFileName}
                 onChange={(e) => setNewFileName(e.target.value)}
@@ -473,14 +524,18 @@ export default function FileExplorer({ onFileSelect, onClose }: FileExplorerProp
               />
             </div>
             <div>
-              <label className="text-sm text-slate-300 mb-2 block">File Type</label>
+              <label className="text-sm text-slate-300 mb-2 block">
+                File Type
+              </label>
               <div className="flex gap-2">
                 <Button
                   variant={selectedFileType === "sol" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedFileType("sol")}
                   className={
-                    selectedFileType === "sol" ? "bg-orange-600 hover:bg-orange-700" : "border-slate-600 text-slate-300"
+                    selectedFileType === "sol"
+                      ? "bg-orange-600 hover:bg-orange-700"
+                      : "border-slate-600 text-slate-300"
                   }
                 >
                   Solidity (.sol)
@@ -490,7 +545,9 @@ export default function FileExplorer({ onFileSelect, onClose }: FileExplorerProp
                   size="sm"
                   onClick={() => setSelectedFileType("js")}
                   className={
-                    selectedFileType === "js" ? "bg-orange-600 hover:bg-orange-700" : "border-slate-600 text-slate-300"
+                    selectedFileType === "js"
+                      ? "bg-orange-600 hover:bg-orange-700"
+                      : "border-slate-600 text-slate-300"
                   }
                 >
                   JavaScript (.js)
@@ -501,14 +558,17 @@ export default function FileExplorer({ onFileSelect, onClose }: FileExplorerProp
               <Button
                 variant="outline"
                 onClick={() => {
-                  setShowNewFileDialog(false)
-                  setCurrentParentId(undefined)
+                  setShowNewFileDialog(false);
+                  setCurrentParentId(undefined);
                 }}
                 className="border-slate-600 text-slate-300"
               >
                 Cancel
               </Button>
-              <Button onClick={createNewFile} className="bg-orange-600 hover:bg-orange-700">
+              <Button
+                onClick={createNewFile}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
                 Create File
               </Button>
             </div>
@@ -520,11 +580,15 @@ export default function FileExplorer({ onFileSelect, onClose }: FileExplorerProp
       <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
         <DialogContent className="bg-slate-800 border-slate-700">
           <DialogHeader>
-            <DialogTitle className="text-slate-100">Create New Folder</DialogTitle>
+            <DialogTitle className="text-slate-100">
+              Create New Folder
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-slate-300 mb-2 block">Folder Name</label>
+              <label className="text-sm text-slate-300 mb-2 block">
+                Folder Name
+              </label>
               <Input
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
@@ -537,14 +601,17 @@ export default function FileExplorer({ onFileSelect, onClose }: FileExplorerProp
               <Button
                 variant="outline"
                 onClick={() => {
-                  setShowNewFolderDialog(false)
-                  setCurrentParentId(undefined)
+                  setShowNewFolderDialog(false);
+                  setCurrentParentId(undefined);
                 }}
                 className="border-slate-600 text-slate-300"
               >
                 Cancel
               </Button>
-              <Button onClick={createNewFolder} className="bg-orange-600 hover:bg-orange-700">
+              <Button
+                onClick={createNewFolder}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
                 Create Folder
               </Button>
             </div>
@@ -552,5 +619,5 @@ export default function FileExplorer({ onFileSelect, onClose }: FileExplorerProp
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

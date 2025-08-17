@@ -69,9 +69,10 @@ interface ConsolePanelProps {
   onToggleVisibility?: () => void;
 }
 
-
-
-export default function ConsolePanel({ height, onToggleVisibility }: ConsolePanelProps) {
+export default function ConsolePanel({
+  height,
+  onToggleVisibility,
+}: ConsolePanelProps) {
   const [activeTab, setActiveTab] = useState("terminal");
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [debuggerEntries, setDebuggerEntries] = useState<DebuggerEntry[]>([]);
@@ -80,7 +81,7 @@ export default function ConsolePanel({ height, onToggleVisibility }: ConsolePane
   const [isRunningTests, setIsRunningTests] = useState(false);
   const [testTerminalHistory, setTestTerminalHistory] = useState<string[]>([]);
   const [expandedErrors, setExpandedErrors] = useState<Set<string>>(new Set());
-  
+
   const testTerminalRef = useRef<HTMLDivElement>(null);
   const [terminalInput, setTerminalInput] = useState("");
   const [terminalHistory, setTerminalHistory] = useState<string[]>([
@@ -117,7 +118,7 @@ export default function ConsolePanel({ height, onToggleVisibility }: ConsolePane
     const currentResults = testRunner.getCurrentResults();
     if (currentResults) {
       const allTests: TestResult[] = [];
-      currentResults.suites.forEach(suite => {
+      currentResults.suites.forEach((suite) => {
         allTests.push(...suite.tests);
       });
       setTestResults(allTests);
@@ -136,7 +137,7 @@ export default function ConsolePanel({ height, onToggleVisibility }: ConsolePane
       terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
   }, [terminalHistory]);
-  
+
   useEffect(() => {
     if (testTerminalRef.current) {
       testTerminalRef.current.scrollTop = testTerminalRef.current.scrollHeight;
@@ -220,7 +221,7 @@ export default function ConsolePanel({ height, onToggleVisibility }: ConsolePane
       return newSet;
     });
   };
-  
+
   const toggleErrorDetails = (testId: string) => {
     setExpandedErrors((prev) => {
       const newSet = new Set(prev);
@@ -256,55 +257,66 @@ export default function ConsolePanel({ height, onToggleVisibility }: ConsolePane
 
   const runTests = async () => {
     if (isRunningTests) return;
-    
+
     setIsRunningTests(true);
-    setTestTerminalHistory(['$ npm test', '']);
-    
+    setTestTerminalHistory(["$ npm test", ""]);
+
     try {
       const results = await testRunner.runTests();
       const allTests: TestResult[] = [];
-      results.suites.forEach(suite => {
+      results.suites.forEach((suite) => {
         allTests.push(...suite.tests);
       });
       setTestResults(allTests);
       setTestSuites(results.suites);
-      
+
       // Format test results for terminal display
       const terminalOutput: string[] = [];
-      
+
       if (results.suites.length === 0) {
-        terminalOutput.push('⚠️  No test files found. Create .test.js or .test.sol files to run tests.');
+        terminalOutput.push(
+          "⚠️  No test files found. Create .test.js or .test.sol files to run tests."
+        );
       } else {
-        terminalOutput.push(`🧪 Running tests from ${results.suites.length} file(s)...`);
-        terminalOutput.push('');
-        
-        results.suites.forEach(suite => {
+        terminalOutput.push(
+          `🧪 Running tests from ${results.suites.length} file(s)...`
+        );
+        terminalOutput.push("");
+
+        results.suites.forEach((suite) => {
           terminalOutput.push(`  ${suite.name}:`);
-          suite.tests.forEach(test => {
-            const status = test.status === 'passed' ? '✓' : '✗';
-            const statusColor = test.status === 'passed' ? 'text-green-400' : 'text-red-400';
-            terminalOutput.push(`    ${status} ${test.name} (${test.duration}ms)`);
+          suite.tests.forEach((test) => {
+            const status = test.status === "passed" ? "✓" : "✗";
+            const statusColor =
+              test.status === "passed" ? "text-green-400" : "text-red-400";
+            terminalOutput.push(
+              `    ${status} ${test.name} (${test.duration}ms)`
+            );
           });
-          terminalOutput.push('');
+          terminalOutput.push("");
         });
-        
+
         const resultMessage = results.success
           ? `✅ All tests passed! ${results.passedTests}/${results.totalTests} tests completed in ${results.duration}ms`
           : `❌ ${results.failedTests}/${results.totalTests} tests failed. Completed in ${results.duration}ms`;
-        
+
         terminalOutput.push(resultMessage);
-        terminalOutput.push('');
-        terminalOutput.push(`  ${results.passedTests} passing (${results.duration}ms)`);
+        terminalOutput.push("");
+        terminalOutput.push(
+          `  ${results.passedTests} passing (${results.duration}ms)`
+        );
         if (results.failedTests > 0) {
           terminalOutput.push(`  ${results.failedTests} failing`);
         }
       }
-      
-      setTestTerminalHistory(prev => [...prev, ...terminalOutput]);
-      
+
+      setTestTerminalHistory((prev) => [...prev, ...terminalOutput]);
     } catch (error) {
-      console.error('Failed to run tests:', error);
-      setTestTerminalHistory(prev => [...prev, `❌ Error running tests: ${error}`]);
+      console.error("Failed to run tests:", error);
+      setTestTerminalHistory((prev) => [
+        ...prev,
+        `❌ Error running tests: ${error}`,
+      ]);
     } finally {
       setIsRunningTests(false);
     }
@@ -778,18 +790,24 @@ export default function ConsolePanel({ height, onToggleVisibility }: ConsolePane
             <div className="h-full flex flex-col">
               {/* Header with Run Tests button */}
               <div className="flex items-center justify-between p-2 border-b border-slate-700 flex-shrink-0">
-                <h3 className="text-sm font-medium text-slate-300">Test Results Terminal</h3>
+                <h3 className="text-sm font-medium text-slate-300">
+                  Test Results Terminal
+                </h3>
                 <Button
                   onClick={runTests}
                   disabled={isRunningTests}
                   size="sm"
                   className="flex items-center gap-2 h-7 px-3 text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white"
                 >
-                  <Play className={`w-3 h-3 ${isRunningTests ? 'animate-spin' : ''}`} />
-                  {isRunningTests ? 'Running...' : 'Run Tests'}
+                  <Play
+                    className={`w-3 h-3 ${
+                      isRunningTests ? "animate-spin" : ""
+                    }`}
+                  />
+                  {isRunningTests ? "Running..." : "Run Tests"}
                 </Button>
               </div>
-              
+
               {/* Terminal Output */}
               <div
                 ref={testTerminalRef}
@@ -800,7 +818,9 @@ export default function ConsolePanel({ height, onToggleVisibility }: ConsolePane
                     <div className="text-center">
                       <TestTube className="w-8 h-8 mx-auto mb-2 opacity-50" />
                       <div>No test results</div>
-                      <div className="text-xs mt-1">Click "Run Tests" to execute tests</div>
+                      <div className="text-xs mt-1">
+                        Click "Run Tests" to execute tests
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -822,44 +842,49 @@ export default function ConsolePanel({ height, onToggleVisibility }: ConsolePane
                           !line.trim() ? "" : "text-slate-300"
                         )}
                       >
-                        {line || '\u00A0'}
+                        {line || "\u00A0"}
                       </div>
                     ))}
-                    
+
                     {/* Failed tests with expandable errors */}
-                    {testResults.filter(test => test.status === 'failed' && test.error).map((test) => (
-                      <div key={`error-${test.id}`} className="mt-4 border-t border-slate-700 pt-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-red-400 text-sm font-medium">
-                            ❌ {test.name} - Error Details
-                          </span>
-                          <button
-                            onClick={() => toggleErrorDetails(test.id)}
-                            className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                          >
-                            {expandedErrors.has(test.id) ? (
-                              <>
-                                <ChevronUp className="w-3 h-3" />
-                                Hide Error
-                              </>
-                            ) : (
-                              <>
-                                <ChevronDown className="w-3 h-3" />
-                                Show Error
-                              </>
-                            )}
-                          </button>
-                        </div>
-                        
-                        {expandedErrors.has(test.id) && test.error && (
-                          <div className="mt-2 p-3 bg-red-900/20 border border-red-700/30 rounded">
-                            <div className="text-red-300 text-xs font-mono whitespace-pre-wrap">
-                              {test.error}
-                            </div>
+                    {testResults
+                      .filter((test) => test.status === "failed" && test.error)
+                      .map((test) => (
+                        <div
+                          key={`error-${test.id}`}
+                          className="mt-4 border-t border-slate-700 pt-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-red-400 text-sm font-medium">
+                              ❌ {test.name} - Error Details
+                            </span>
+                            <button
+                              onClick={() => toggleErrorDetails(test.id)}
+                              className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                            >
+                              {expandedErrors.has(test.id) ? (
+                                <>
+                                  <ChevronUp className="w-3 h-3" />
+                                  Hide Error
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="w-3 h-3" />
+                                  Show Error
+                                </>
+                              )}
+                            </button>
                           </div>
-                        )}
-                      </div>
-                    ))}
+
+                          {expandedErrors.has(test.id) && test.error && (
+                            <div className="mt-2 p-3 bg-red-900/20 border border-red-700/30 rounded">
+                              <div className="text-red-300 text-xs font-mono whitespace-pre-wrap">
+                                {test.error}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                   </div>
                 )}
               </div>

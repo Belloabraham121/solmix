@@ -511,7 +511,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {/* Header */}
-      <div className="bg-gray-900 border-b border-gray-700 p-3 space-y-3">
+      <div className="bg-slate-900 border-b border-gray-700 p-3 space-y-3">
         {/* Title and Eliza Status */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -553,7 +553,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                   <Wrench className="w-3 h-3" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] bg-gray-900 border-gray-700">
+              <DialogContent className="max-w-4xl max-h-[80vh] bg-slate-900 border-gray-700">
                 <DialogHeader>
                   <DialogTitle className="text-gray-100 flex items-center gap-2">
                     <Wrench className="w-5 h-5" />
@@ -740,7 +740,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
 
       {/* Input Area */}
       {isElizaConnected && (
-        <div className="p-3 bg-gray-900 border-t border-gray-700">
+        <div className="p-3 bg-slate-900 border-t border-gray-700">
           <div className="space-y-2">
             {/* MCP Context Selection */}
             <div className="flex items-center gap-2">

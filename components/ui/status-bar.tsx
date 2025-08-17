@@ -1,13 +1,13 @@
-import ConnectionStatus from "@/components/ui/connection-status"
-import { Button } from "@/components/ui/button"
-import { Terminal } from "lucide-react"
+import ConnectionStatus from "@/components/ui/connection-status";
+import { Button } from "@/components/ui/button";
+import { Terminal } from "lucide-react";
 
 interface StatusBarProps {
-  solidityVersion?: string
-  isConnected?: boolean
-  networkName?: string
-  isConsoleVisible?: boolean
-  onShowConsole?: () => void
+  solidityVersion?: string;
+  isConnected?: boolean;
+  networkName?: string;
+  isConsoleVisible?: boolean;
+  onShowConsole?: () => void;
 }
 
 export default function StatusBar({
@@ -34,5 +34,5 @@ export default function StatusBar({
         </Button>
       )}
     </div>
-  )
+  );
 }

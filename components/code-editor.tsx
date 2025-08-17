@@ -979,7 +979,7 @@ main().catch(console.error);`;
           theme="vs-dark"
           path={activeFile.id} // Using path for multi-model editing
           loading={
-            <div className="h-full flex items-center justify-center bg-gray-900">
+            <div className="h-full flex items-center justify-center bg-slate-900">
               <div className="text-center">
                 <div className="text-gray-400 text-lg mb-2">
                   Loading SolMix...
