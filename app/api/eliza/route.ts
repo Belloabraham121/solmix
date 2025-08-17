@@ -1,10 +1,77 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { MCPClient } from '@/lib/mcp-client';
-import MCPClientSingleton from '@/lib/mcp-singleton';
+import { NextRequest, NextResponse } from "next/server";
+import { MCPClient } from "@/lib/mcp-client";
+import MCPClientSingleton from "@/lib/mcp-singleton";
+import { AgentRuntime, validateCharacter } from "@elizaos/core";
+import { googleGenAIPlugin } from "@elizaos/plugin-google-genai";
+import fs from "fs";
+import path from "path";
 
-// Global MCP client instance
+// Global instances
 let mcpClient: MCPClient | null = null;
 let elizaAgent: any = null;
+let elizaRuntime: any = null;
+
+// Load Eliza configuration
+function loadElizaConfig() {
+  try {
+    const configPath = path.join(process.cwd(), "eliza-config.json");
+    const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    return config;
+  } catch (error) {
+    console.error("Failed to load Eliza config:", error);
+    return null;
+  }
+}
+
+// Initialize Eliza agent with MCP plugin
+async function initializeElizaAgent() {
+  try {
+    const config = loadElizaConfig();
+    if (!config) {
+      throw new Error("Failed to load Eliza configuration");
+    }
+
+    // Create character from config
+    const character = {
+      ...config.character,
+      settings: {
+        secrets: {
+          GOOGLE_GENAI_API_KEY:
+            process.env.GOOGLE_GENAI_API_KEY ||
+            config.settings.googleGenAI.apiKey,
+        },
+        ...config.settings,
+      },
+    };
+
+    // Validate character
+    const isValid = validateCharacter(character);
+    if (!isValid) {
+      throw new Error("Invalid character configuration");
+    }
+
+    // Create runtime with Google GenAI plugin (MCP handled separately)
+    elizaRuntime = new AgentRuntime({
+      databaseAdapter: null, // Use in-memory for now
+      token: process.env.ELIZA_TOKEN || "default-token",
+      character: character,
+      plugins: [googleGenAIPlugin],
+    });
+
+    console.log("Eliza agent initialized successfully!");
+    console.log("Character:", character.name);
+    console.log("Plugins loaded:", ["googleGenAI"]);
+    console.log(
+      "MCP servers configured:",
+      Object.keys(character.settings?.mcp?.servers || {})
+    );
+
+    return elizaRuntime;
+  } catch (error) {
+    console.error("Failed to initialize Eliza agent:", error);
+    throw error;
+  }
+}
 
 // Default MCP configuration
 const defaultMCPConfig = {
@@ -19,46 +86,116 @@ const defaultMCPConfig = {
   },
 };
 
-// Simulated Eliza responses for demonstration
-const elizaResponses = [
-  "I can help you with smart contract development. What would you like to work on?",
-  "Let me analyze your code and provide suggestions for optimization.",
-  "I notice you're working with Solidity. Would you like me to review your contract for security issues?",
-  "Based on your code, I recommend implementing proper access controls and input validation.",
-  "I can help you deploy this contract to the Sei blockchain. Would you like me to guide you through the process?",
-  "Your contract looks good! Consider adding events for better transparency and debugging.",
-  "I suggest using OpenZeppelin's libraries for standard implementations like ERC20 or ERC721.",
-  "For gas optimization, consider using 'uint256' instead of smaller integer types in most cases.",
-  "Remember to implement proper error handling with custom errors for better gas efficiency.",
-  "Would you like me to help you write comprehensive tests for your smart contract?"
-];
+// Helper function to process messages with Eliza runtime
+async function processWithElizaRuntime(
+  message: string,
+  elizaRuntime: any,
+  mcpClient: any,
+  mcpContext?: any
+): Promise<string> {
+  try {
+    // Create a proper message object for Eliza
+    const messageObj = {
+      content: {
+        text: message,
+      },
+      userId: "user",
+      roomId: "solmix-ide",
+      agentId: elizaRuntime.agentId,
+    };
 
-function getRandomElizaResponse(userMessage: string): string {
-  // Simple keyword-based response selection
-  const message = userMessage.toLowerCase();
-  
-  if (message.includes('deploy') || message.includes('deployment')) {
-    return "I can help you deploy this contract to the Sei blockchain. Would you like me to guide you through the process?";
+    // Compose state for response generation
+    const state = await elizaRuntime.composeState(messageObj);
+
+    // Process actions based on the message and state
+    const actions = await elizaRuntime.processActions(
+      messageObj,
+      [],
+      state,
+      async () => {
+        // This callback can be used for additional processing
+        return [];
+      }
+    );
+
+    // Extract the text response from Eliza's actions
+    if (actions && actions.length > 0) {
+      for (const action of actions) {
+        if (action.content && action.content.text) {
+          return action.content.text;
+        }
+      }
+    }
+
+    // If no actions generated a response, try to generate one using the model provider
+    const modelProvider = elizaRuntime.getService("model");
+    if (modelProvider) {
+      const response = await modelProvider.generateText({
+        context: state.text || message,
+        stop: [],
+        max_response_length: 1000,
+      });
+
+      if (response && response.text) {
+        return response.text;
+      }
+    }
+
+    // Fallback if no proper response
+    return "I'm ready to help you with your development tasks. What would you like me to do?";
+  } catch (error) {
+    console.error("Error processing message with Eliza runtime:", error);
+    throw error;
   }
-  
-  if (message.includes('security') || message.includes('audit')) {
-    return "Based on your code, I recommend implementing proper access controls and input validation. I can also check for common security vulnerabilities.";
+}
+
+// Helper function to check if MCP tools should be called based on message content
+async function shouldCallMCPTool(
+  message: string,
+  mcpClient: any
+): Promise<{
+  shouldCall: boolean;
+  toolName?: string;
+  serverName?: string;
+  args?: any;
+}> {
+  const lowerMessage = message.toLowerCase();
+
+  try {
+    const tools = await mcpClient.listTools();
+
+    // Check for balance-related queries
+    if (lowerMessage.includes("balance") || lowerMessage.includes("wallet")) {
+      const balanceTool = tools.find((tool: any) => tool.name === "balance");
+      if (balanceTool) {
+        return {
+          shouldCall: true,
+          toolName: "balance",
+          serverName: "sei-mcp-server",
+          args: {},
+        };
+      }
+    }
+
+    // Check for other tool-specific queries
+    if (lowerMessage.includes("deploy") && lowerMessage.includes("contract")) {
+      const deployTool = tools.find((tool: any) =>
+        tool.name.includes("deploy")
+      );
+      if (deployTool) {
+        return {
+          shouldCall: true,
+          toolName: deployTool.name,
+          serverName: "sei-mcp-server",
+          args: {},
+        };
+      }
+    }
+  } catch (error) {
+    console.error("Error checking MCP tools:", error);
   }
-  
-  if (message.includes('gas') || message.includes('optimize')) {
-    return "For gas optimization, consider using 'uint256' instead of smaller integer types, and implement custom errors instead of require statements with strings.";
-  }
-  
-  if (message.includes('test') || message.includes('testing')) {
-    return "Would you like me to help you write comprehensive tests for your smart contract? I can suggest test cases for edge conditions and security scenarios.";
-  }
-  
-  if (message.includes('erc20') || message.includes('token')) {
-    return "I suggest using OpenZeppelin's ERC20 implementation as a base. It's well-tested and follows best practices for token contracts.";
-  }
-  
-  // Return a random response for general queries
-  return elizaResponses[Math.floor(Math.random() * elizaResponses.length)];
+
+  return { shouldCall: false };
 }
 
 export async function POST(request: NextRequest) {
@@ -67,255 +204,276 @@ export async function POST(request: NextRequest) {
     const { action, message, config } = body;
 
     switch (action) {
-      case 'connect':
+      case "connect":
         try {
-          // Use the singleton MCP client instead of creating a new one
-          console.log('Eliza: Getting MCP client from singleton...');
+          console.log("Initializing Eliza agent with MCP plugin...");
+
+          // Initialize the actual Eliza agent with MCP plugin
+          elizaRuntime = await initializeElizaAgent();
+
+          // Also get the MCP client for direct tool access
           mcpClient = await MCPClientSingleton.getInstance();
-          console.log('Eliza: Got MCP client instance:', mcpClient.instanceId);
-          
+          console.log("MCP client instance:", mcpClient.instanceId);
+
           // Set up event listeners
-          mcpClient.on('status', (status) => {
-            console.log('MCP Status:', status);
+          mcpClient.on("status", (status) => {
+            console.log("MCP Status:", status);
           });
-          
-          mcpClient.on('error', (error) => {
-            console.error('MCP Error:', error);
+
+          mcpClient.on("error", (error) => {
+            console.error("MCP Error:", error);
           });
-          
-          mcpClient.on('server_connected', (event) => {
-            console.log('MCP Server Connected:', event);
+
+          mcpClient.on("server_connected", (event) => {
+            console.log("MCP Server Connected:", event);
           });
-          
-          // Client is already initialized by singleton
-          
+
           // Get available tools from MCP client
           const availableTools = mcpClient.getAllTools();
-          console.log('Available tools:', availableTools);
-          
-          // Simulate Eliza agent initialization
+          console.log("Available tools:", availableTools);
+
+          // Create Eliza agent info
           elizaAgent = {
-            id: 'eliza-' + Date.now(),
-            name: 'Eliza AI Agent',
-            capabilities: ['smart-contract-analysis', 'code-review', 'deployment-guidance'],
+            id: "eliza-" + Date.now(),
+            name: "Eliza AI Agent",
+            capabilities: [
+              "smart-contract-analysis",
+              "code-review",
+              "deployment-guidance",
+              "mcp-tool-execution",
+            ],
             mcpIntegration: true,
+            elizaRuntime: true,
             connectedServers: mcpClient.getConnectedServers(),
-            availableTools: availableTools
+            availableTools: availableTools,
           };
-          
+
           return NextResponse.json({
             success: true,
-            message: 'Successfully connected to Eliza agent with MCP integration',
+            message:
+              "Successfully connected to Eliza agent with MCP plugin integration",
             agent: elizaAgent,
-            mcpStatus: mcpClient.getStatus()
+            mcpStatus: mcpClient.getStatus(),
           });
         } catch (error) {
-          console.error('Connection error:', error);
-          return NextResponse.json({
-            success: false,
-            error: `Failed to connect: ${error instanceof Error ? error.message : String(error)}`
-          }, { status: 500 });
+          console.error("Connection error:", error);
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Failed to connect: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            },
+            { status: 500 }
+          );
         }
 
-      case 'disconnect':
+      case "disconnect":
         try {
           if (mcpClient) {
             await mcpClient.disconnect();
             mcpClient = null;
           }
           elizaAgent = null;
-          
+
           return NextResponse.json({
             success: true,
-            message: 'Successfully disconnected from Eliza agent and MCP servers'
+            message:
+              "Successfully disconnected from Eliza agent and MCP servers",
           });
         } catch (error) {
-          console.error('Disconnection error:', error);
-          return NextResponse.json({
-            success: false,
-            error: `Failed to disconnect: ${error instanceof Error ? error.message : String(error)}`
-          }, { status: 500 });
+          console.error("Disconnection error:", error);
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Failed to disconnect: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            },
+            { status: 500 }
+          );
         }
 
-      case 'send':
+      case "send":
         try {
-          if (!elizaAgent || !mcpClient) {
-            return NextResponse.json({
-              success: false,
-              error: 'Eliza agent is not connected. Please connect first.'
-            }, { status: 400 });
+          if (!elizaAgent || !mcpClient || !elizaRuntime) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: "Eliza agent is not connected. Please connect first.",
+              },
+              { status: 400 }
+            );
           }
-          
+
           if (!message) {
-            return NextResponse.json({
-              success: false,
-              error: 'Message is required'
-            }, { status: 400 });
+            return NextResponse.json(
+              {
+                success: false,
+                error: "Message is required",
+              },
+              { status: 400 }
+            );
           }
-          
+
           // Extract MCP context from request
           const { mcpContext } = body;
-          
-          // Simulate processing time
-          await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
-          
-          let response = '';
-          const lowerMessage = message.toLowerCase();
-          
-          // Handle MCP context-aware queries
-          if (mcpContext && mcpContext.serverId) {
-            console.log('Processing message with MCP context:', mcpContext);
-            
-            try {
-              // Handle Sei blockchain queries
-              if (mcpContext.serverId === 'sei-mcp-server') {
-                if (lowerMessage.includes('balance') && lowerMessage.includes('0x')) {
-                  // Extract address from message
-                  const addressMatch = message.match(/0x[a-fA-F0-9]{40}/);
-                  if (addressMatch) {
-                    const address = addressMatch[0];
-                    
-                    // Try to call the balance tool
-                     const tools = mcpContext.availableTools || [];
-                     const balanceTool = tools.find((tool: any) => 
-                       tool.name.toLowerCase().includes('balance') || 
-                       tool.name.toLowerCase().includes('account')
-                     );
-                     
-                     if (balanceTool) {
-                       try {
-                         const result = await mcpClient.callTool({
-                           toolName: balanceTool.name,
-                           serverName: mcpContext.serverId,
-                           arguments: { address: address }
-                         });
-                         response = `Here's the balance information for address ${address}:\n\n${JSON.stringify(result, null, 2)}`;
-                       } catch (toolError) {
-                         console.error('Tool call error:', toolError);
-                         response = `I tried to check the balance for ${address}, but encountered an error: ${toolError instanceof Error ? toolError.message : String(toolError)}. The sei-mcp-server might need proper configuration or the address format might be incorrect.`;
-                       }
-                     } else {
-                       response = `I can help you check the Sei balance for ${address}, but I don't see a balance checking tool available in the sei-mcp-server. Available tools: ${tools.map((t: { name: string }) => t.name).join(', ')}`;
-                     }
-                  } else {
-                    response = "I can help you check Sei balances, but I need a valid address (starting with 0x). Please provide a valid Sei address.";
-                  }
-                } else {
-                  response = `I'm connected to the Sei MCP server and can help with blockchain operations. Available tools: ${mcpContext.availableTools?.map(t => t.name).join(', ') || 'None'}. What would you like me to help you with?`;
-                }
-              }
-              // Handle filesystem queries
-               else if (mcpContext.serverId === 'filesystem-server') {
-                 response = `I'm connected to the filesystem server and can help with file operations. Available tools: ${mcpContext.availableTools?.map((t: any) => t.name).join(', ') || 'None'}. What file operation would you like me to perform?`;
-               }
-               // Handle memory queries
-               else if (mcpContext.serverId === 'memory-server') {
-                 response = `I'm connected to the memory server and can help with data storage and retrieval. Available tools: ${mcpContext.availableTools?.map((t: any) => t.name).join(', ') || 'None'}. What would you like me to remember or recall?`;
-               }
-               else {
-                 response = `I'm connected to ${mcpContext.serverName} with ${mcpContext.availableTools?.length || 0} available tools. How can I help you?`;
-               }
-            } catch (error) {
-              console.error('MCP context processing error:', error);
-              response = `I encountered an error while processing your request with ${mcpContext.serverName}: ${error instanceof Error ? error.message : String(error)}`;
-            }
-          }
-          // Handle general queries without specific MCP context
-          else if (lowerMessage.includes('list tools') || lowerMessage.includes('available tools')) {
-            const tools = await mcpClient.getAllTools();
-            if (tools.length > 0) {
-              response = `I have access to ${tools.length} tools across ${mcpClient.getConnectedServers().length} MCP servers:\n\n`;
-              tools.forEach(tool => {
-                response += `• **${tool.name}** (${tool.serverName}): ${tool.description || 'No description available'}\n`;
+
+          console.log("Processing message with Eliza runtime:", message);
+          console.log("MCP context:", mcpContext);
+
+          let response = "";
+
+          try {
+            console.log("Eliza runtime available:", !!elizaRuntime);
+
+            // Check if we should call an MCP tool first
+            const toolCheck = await shouldCallMCPTool(message, mcpClient);
+
+            if (toolCheck.shouldCall) {
+              console.log(`Calling MCP tool: ${toolCheck.toolName}`);
+
+              // Call the MCP tool
+              const toolResult = await mcpClient.callTool({
+                toolName: toolCheck.toolName!,
+                serverName: toolCheck.serverName!,
+                arguments: toolCheck.args || {},
               });
+
+              // Create enhanced message with tool result for Eliza
+              const enhancedMessage = `${message}\n\nMCP Tool Result from ${
+                toolCheck.toolName
+              }: ${JSON.stringify(toolResult, null, 2)}`;
+
+              // Process with Eliza runtime including tool result
+              response = await processWithElizaRuntime(
+                enhancedMessage,
+                elizaRuntime,
+                mcpClient,
+                mcpContext
+              );
             } else {
-              response = "I don't have any tools available at the moment. Please check the MCP server connections.";
+              // Process normally with Eliza runtime
+              response = await processWithElizaRuntime(
+                message,
+                elizaRuntime,
+                mcpClient,
+                mcpContext
+              );
             }
-          } else if (lowerMessage.includes('server status') || lowerMessage.includes('mcp status')) {
-            const status = mcpClient.getStatus();
-            response = `MCP Status:\n• Connected servers: ${status.connectedServers}\n• Total tools: ${status.totalTools}\n• Servers: ${status.servers.map(s => `${s.name} (${s.connected ? 'connected' : 'disconnected'})`).join(', ')}`;
-          } else {
-            // Generate contextual response based on message content
-            response = getRandomElizaResponse(message);
-            
-            // Add MCP context if relevant
-            if (mcpClient.getConnectedServers().length > 0) {
-              const tools = await mcpClient.getAllTools();
-              response += `\n\n*I'm connected to ${mcpClient.getConnectedServers().length} MCP server(s) and have access to ${tools.length} tools to assist you.*`;
-            }
+          } catch (elizaError) {
+            console.error("Eliza runtime error:", elizaError);
+            // Fallback response
+            response =
+              "I apologize, but I encountered an error processing your message. Please try again.";
           }
-          
+
           return NextResponse.json({
             success: true,
             message: response,
             agent: elizaAgent,
-            mcpStatus: mcpClient.getStatus()
+            mcpStatus: mcpClient.getStatus(),
           });
         } catch (error) {
-          console.error('Message processing error:', error);
-          return NextResponse.json({
-            success: false,
-            error: `Failed to process message: ${error instanceof Error ? error.message : String(error)}`
-          }, { status: 500 });
+          console.error("Message processing error:", error);
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Failed to process message: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            },
+            { status: 500 }
+          );
         }
 
-      case 'status':
+      case "status":
         return NextResponse.json({
           success: true,
           connected: !!elizaAgent,
           agent: elizaAgent,
-          mcpStatus: mcpClient?.getStatus() || null
+          mcpStatus: mcpClient?.getStatus() || null,
         });
 
-      case 'call_tool':
+      case "call_tool":
         try {
-          if (!mcpClient) {
-            return NextResponse.json({
-              success: false,
-              error: 'MCP client is not connected'
-            }, { status: 400 });
-          }
-          
           const { toolName, serverName, arguments: toolArgs } = body;
-          
+
           if (!toolName || !serverName) {
-            return NextResponse.json({
-              success: false,
-              error: 'toolName and serverName are required'
-            }, { status: 400 });
+            return NextResponse.json(
+              {
+                success: false,
+                error: "Tool name and server name are required",
+              },
+              { status: 400 }
+            );
           }
-          
+
+          if (!elizaAgent || !mcpClient || !elizaRuntime) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: "Eliza agent with MCP plugin is not connected",
+              },
+              { status: 400 }
+            );
+          }
+
+          console.log(
+            `Eliza agent calling MCP tool: ${toolName} on ${serverName}`
+          );
+          console.log("Tool arguments:", toolArgs);
+
           const result = await mcpClient.callTool({
             toolName,
             serverName,
-            arguments: toolArgs || {}
+            arguments: toolArgs || {},
           });
-          
+
+          console.log("Tool execution result:", result);
+
           return NextResponse.json({
             success: true,
             result,
-            mcpStatus: mcpClient.getStatus()
+            message: `Tool '${toolName}' executed successfully via Eliza agent with MCP plugin`,
+            mcpStatus: mcpClient.getStatus(),
           });
         } catch (error) {
-          console.error('Tool call error:', error);
-          return NextResponse.json({
-            success: false,
-            error: `Tool call failed: ${error instanceof Error ? error.message : String(error)}`
-          }, { status: 500 });
+          console.error("Eliza MCP tool call error:", error);
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Unknown error occurred",
+              details:
+                "Error occurred while Eliza agent was executing MCP tool",
+            },
+            { status: 500 }
+          );
         }
 
       default:
-        return NextResponse.json({
-          success: false,
-          error: `Unknown action: ${action}`
-        }, { status: 400 });
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Unknown action: ${action}`,
+          },
+          { status: 400 }
+        );
     }
   } catch (error) {
-    console.error('API error:', error);
-    return NextResponse.json({
-      success: false,
-      error: `Internal server error: ${error instanceof Error ? error.message : String(error)}`
-    }, { status: 500 });
+    console.error("API error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Internal server error: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -330,7 +488,8 @@ export async function GET() {
       disconnect: 'POST /api/eliza with action: "disconnect"',
       send: 'POST /api/eliza with action: "send" and message',
       status: 'POST /api/eliza with action: "status"',
-      call_tool: 'POST /api/eliza with action: "call_tool", toolName, serverName, arguments'
-    }
+      call_tool:
+        'POST /api/eliza with action: "call_tool", toolName, serverName, arguments',
+    },
   });
 }

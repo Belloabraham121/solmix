@@ -36,6 +36,12 @@ const nextConfig = {
           Buffer: ['buffer', 'Buffer'],
         })
       )
+      
+      // Handle Cloudflare sockets scheme
+      config.module.rules.push({
+        test: /cloudflare:sockets/,
+        use: 'null-loader'
+      })
     }
     
     // Enable WebAssembly

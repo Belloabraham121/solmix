@@ -70,6 +70,26 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
     try {
       setIsInitializing(true);
       const response = await fetch('/api/mcp/status');
+      
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      console.log('MCP Status API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        contentType,
+        url: response.url
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Expected JSON but got:', text.substring(0, 200));
+        throw new Error('API returned non-JSON response');
+      }
+      
       const data = await response.json();
       
       if (data.success && data.data) {
@@ -77,7 +97,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
           id: server.id || server.name,
           name: server.name,
           description: server.description || 'No description available',
-          status: server.isRunning ? 'connected' : 'disconnected',
+          status: server.status === 'connected' ? 'connected' : 'disconnected',
           tools: server.tools || [],
           category: server.category
         }));

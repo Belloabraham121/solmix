@@ -102,6 +102,26 @@ export function MCPProvider({ children }: MCPProviderProps) {
 
         // Then get the current status
         const statusResponse = await fetch("/api/mcp/status");
+        
+        // Check if response is actually JSON
+        const contentType = statusResponse.headers.get('content-type');
+        console.log('MCP Status API Response (init):', {
+          status: statusResponse.status,
+          statusText: statusResponse.statusText,
+          contentType,
+          url: statusResponse.url
+        });
+        
+        if (!statusResponse.ok) {
+          throw new Error(`HTTP ${statusResponse.status}: ${statusResponse.statusText}`);
+        }
+        
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await statusResponse.text();
+          console.error('Expected JSON but got:', text.substring(0, 200));
+          throw new Error('API returned non-JSON response');
+        }
+        
         const statusResult = await statusResponse.json();
 
         if (statusResult.success) {
@@ -133,6 +153,21 @@ export function MCPProvider({ children }: MCPProviderProps) {
     const interval = setInterval(async () => {
       try {
         const response = await fetch("/api/mcp/status");
+        
+        // Check if response is actually JSON
+        const contentType = response.headers.get('content-type');
+        
+        if (!response.ok) {
+          console.error(`Polling failed: HTTP ${response.status}: ${response.statusText}`);
+          return;
+        }
+        
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await response.text();
+          console.error('Polling expected JSON but got:', text.substring(0, 200));
+          return;
+        }
+        
         const result = await response.json();
 
         if (result.success) {

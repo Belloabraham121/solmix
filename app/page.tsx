@@ -74,14 +74,14 @@ export default function Solmix() {
         setIsResizing(false);
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
       };
 
       // Prevent text selection during resize
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-      
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     },
@@ -109,14 +109,14 @@ export default function Solmix() {
         setIsVerticalResizing(false);
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
       };
 
       // Prevent text selection during resize
-      document.body.style.cursor = 'row-resize';
-      document.body.style.userSelect = 'none';
-      
+      document.body.style.cursor = "row-resize";
+      document.body.style.userSelect = "none";
+
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     },
@@ -163,13 +163,15 @@ export default function Solmix() {
       />
 
       <div className="flex items-center justify-between">
-        <IDEToolbar 
-          onCompile={handleCompile} 
-          onToggleFileExplorer={() => setIsFileExplorerVisible(!isFileExplorerVisible)}
+        <IDEToolbar
+          onCompile={handleCompile}
+          onToggleFileExplorer={() =>
+            setIsFileExplorerVisible(!isFileExplorerVisible)
+          }
           isFileExplorerVisible={isFileExplorerVisible}
         />
         <div className="px-4">
-          <StatusBar 
+          <StatusBar
             isConsoleVisible={isConsoleVisible}
             onShowConsole={() => setIsConsoleVisible(true)}
           />
@@ -181,8 +183,8 @@ export default function Solmix() {
         {/* Sidebar - File Explorer */}
         {isFileExplorerVisible && (
           <aside className="w-64 bg-slate-850 border-r border-slate-700 flex flex-col">
-            <FileExplorer 
-              onFileSelect={handleFileSelect} 
+            <FileExplorer
+              onFileSelect={handleFileSelect}
               onClose={() => setIsFileExplorerVisible(false)}
             />
           </aside>
@@ -216,7 +218,7 @@ export default function Solmix() {
               isResizing && "bg-orange-500"
             )}
             onMouseDown={handleMouseDown}
-            style={{ marginLeft: '-4px' }}
+            style={{ marginLeft: "-4px" }}
           >
             <div className="w-0.5 h-8 bg-slate-600 group-hover:bg-orange-500 transition-colors" />
           </div>
@@ -271,13 +273,13 @@ export default function Solmix() {
               isVerticalResizing && "bg-orange-500"
             )}
             onMouseDown={handleVerticalMouseDown}
-            style={{ marginTop: '-4px' }}
+            style={{ marginTop: "-4px" }}
           >
             <div className="w-8 h-0.5 bg-slate-600 group-hover:bg-orange-500 transition-colors" />
           </div>
 
-          <ConsolePanel 
-            height={consoleHeight} 
+          <ConsolePanel
+            height={consoleHeight}
             onToggleVisibility={() => setIsConsoleVisible(false)}
           />
         </div>

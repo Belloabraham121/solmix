@@ -4,42 +4,42 @@ import MCPClientSingleton from "@/lib/mcp-singleton";
 export async function GET() {
   try {
     console.log("API: Getting MCP status from real client");
-    
+
     // Initialize MCP client if needed
     console.log("API: Ensuring MCP client is initialized...");
     const client = await MCPClientSingleton.getInstance();
-    
+
     // Wait a moment for connections to establish
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     const status = client.getStatus();
     console.log("API: MCP client initialized, status:", {
       initialized: status.initialized,
       connectedServers: status.connectedServers,
-      totalServers: status.servers?.length || 0
+      totalServers: status.servers?.length || 0,
     });
-    
+
     console.log("API: MCP client status:", status);
-    
+
     // Get all available tools
     const allTools = await client.getAllTools();
     console.log("API: Available tools:", allTools.length);
-    
+
     // Get connected servers info
     const connectedServers = client.getConnectedServers();
     console.log("API: Connected servers:", connectedServers);
-    
+
     // Transform server data for the dashboard
-    const servers = status.servers.map(server => ({
+    const servers = status.servers.map((server) => ({
       id: server.name,
       name: server.name,
       status: server.connected ? "connected" : "disconnected",
       tools: server.toolCount,
       lastSeen: new Date(),
       version: "1.0.0",
-      capabilities: ["tools", "resources"]
+      capabilities: ["tools", "resources"],
     }));
-    
+
     // Create metrics
     const metrics = {
       totalServers: status.servers.length,
@@ -49,18 +49,19 @@ export async function GET() {
       completedWorkflows: 0,
       failedWorkflows: 0,
       securityViolations: 0,
-      averageResponseTime: 150
+      averageResponseTime: 150,
     };
-    
+
     // Create events for server status changes
-    const events = servers.map(server => ({
+    const events = servers.map((server) => ({
       id: `${server.id}-status`,
       type: "server_status",
       category: "server" as const,
-      severity: server.status === "connected" ? "low" as const : "medium" as const,
+      severity:
+        server.status === "connected" ? ("low" as const) : ("medium" as const),
       message: `Server ${server.name} is ${server.status}`,
       timestamp: new Date(),
-      source: server.name
+      source: server.name,
     }));
 
     console.log("API: Returning real MCP data");
