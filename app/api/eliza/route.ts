@@ -1,8 +1,11 @@
+console.log("[ROUTE] Eliza route file loaded - TEST");
+
 import { NextRequest, NextResponse } from "next/server";
 import { MCPClient } from "@/lib/mcp-client";
 import MCPClientSingleton from "@/lib/mcp-singleton";
 import { AgentRuntime, validateCharacter } from "@elizaos/core";
 import { googleGenAIPlugin } from "@elizaos/plugin-google-genai";
+import seiPlugin from "@/lib/eliza-sei-plugin.js";
 import fs from "fs";
 import path from "path";
 
@@ -149,6 +152,243 @@ async function processWithElizaRuntime(
   }
 }
 
+// Use MCP tools for SEI queries instead of the separate plugin
+async function processMessageWithMCPTools(
+  message: string,
+  mcpClient: any
+): Promise<{ response: string; usedMCP: boolean }> {
+  console.log(`[MCP Tools] Processing message: "${message}"`);
+
+  const lowerMessage = message.toLowerCase();
+
+  // Check for balance queries
+  const hasBalanceKeywords =
+    /\b(balance|bal|funds|amount|how much|what.*have)\b/i.test(message);
+  const addressMatch = message.match(/0x[a-fA-F0-9]{40}/);
+
+  if (hasBalanceKeywords && addressMatch) {
+    const address = addressMatch[0];
+    console.log(`[MCP Tools] Balance query detected for address: ${address}`);
+
+    try {
+      // Call the MCP get_balance tool directly
+      const toolResult = await mcpClient.callTool({
+        toolName: "get_balance",
+        serverName: "sei-mcp-server",
+        arguments: {
+          address: address,
+          network: "sei",
+        },
+      });
+
+      console.log(`[MCP Tools] Balance tool result:`, toolResult);
+
+      // Parse the result
+      let balanceText = `Unable to fetch balance for address ${address}`;
+      if (toolResult?.content && toolResult.content[0]?.text) {
+        const resultText = toolResult.content[0].text;
+        console.log(`[MCP Tools] Raw result text:`, resultText);
+
+        try {
+          const balanceData = JSON.parse(resultText);
+          const balance =
+            balanceData.ether || balanceData.balance || balanceData.wei || "0";
+          balanceText = `The balance for address ${address} is ${balance} SEI`;
+        } catch (parseError) {
+          // If JSON parsing fails, use the raw text
+          balanceText = `Balance result: ${resultText}`;
+        }
+      }
+
+      return {
+        response: balanceText,
+        usedMCP: true,
+      };
+    } catch (error) {
+      console.error("[MCP Tools] Balance query error:", error);
+      return {
+        response: `Sorry, I couldn't fetch the balance. Error: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        usedMCP: true,
+      };
+    }
+  }
+
+  // Check for documentation search queries
+  if (
+    lowerMessage.includes("search") &&
+    (lowerMessage.includes("doc") ||
+      lowerMessage.includes("staking") ||
+      lowerMessage.includes("sei"))
+  ) {
+    const searchQuery = message
+      .replace(/search|docs|documentation|for|about|sei/gi, "")
+      .trim();
+    console.log(
+      `[MCP Tools] Documentation search detected for: ${searchQuery}`
+    );
+
+    try {
+      const toolResult = await mcpClient.callTool({
+        toolName: "search_docs",
+        serverName: "sei-mcp-server",
+        arguments: {
+          query: searchQuery || "staking",
+        },
+      });
+
+      console.log(`[MCP Tools] Docs search result:`, toolResult);
+
+      let searchText = `Unable to find documentation for "${searchQuery}"`;
+      if (toolResult?.content && toolResult.content[0]?.text) {
+        searchText = `Here's what I found in the Sei documentation:\n\n${toolResult.content[0].text}`;
+      }
+
+      return {
+        response: searchText,
+        usedMCP: true,
+      };
+    } catch (error) {
+      console.error("[MCP Tools] Docs search error:", error);
+      return {
+        response: `Sorry, I couldn't search the documentation. Error: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        usedMCP: true,
+      };
+    }
+  }
+
+  // Check for block queries
+  if (
+    (lowerMessage.includes("block") || lowerMessage.includes("latest")) &&
+    !lowerMessage.includes("balance")
+  ) {
+    console.log(`[MCP Tools] Block query detected`);
+
+    try {
+      const toolResult = await mcpClient.callTool({
+        toolName: "get_latest_block",
+        serverName: "sei-mcp-server",
+        arguments: {
+          network: "sei",
+        },
+      });
+
+      console.log(`[MCP Tools] Block result:`, toolResult);
+
+      let blockText = `Unable to fetch latest block information`;
+      if (toolResult?.content && toolResult.content[0]?.text) {
+        const blockData = JSON.parse(toolResult.content[0].text);
+        blockText = `Latest Sei Block Information:\n\nBlock Number: ${
+          blockData.number
+        }\nBlock Hash: ${blockData.hash}\nMiner: ${
+          blockData.miner
+        }\nGas Used: ${blockData.gasUsed}\nTransactions: ${
+          blockData.transactions.length
+        }\nTimestamp: ${new Date(
+          parseInt(blockData.timestamp) * 1000
+        ).toLocaleString()}`;
+      }
+
+      return {
+        response: blockText,
+        usedMCP: true,
+      };
+    } catch (error) {
+      console.error("[MCP Tools] Block query error:", error);
+      return {
+        response: `Sorry, I couldn't fetch block information. Error: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        usedMCP: true,
+      };
+    }
+  }
+
+  // Check for chain info queries
+  if (
+    lowerMessage.includes("chain") ||
+    lowerMessage.includes("network") ||
+    lowerMessage.includes("info")
+  ) {
+    console.log(`[MCP Tools] Chain info query detected`);
+
+    try {
+      const toolResult = await mcpClient.callTool({
+        toolName: "get_chain_info",
+        serverName: "sei-mcp-server",
+        arguments: {
+          network: "sei",
+        },
+      });
+
+      console.log(`[MCP Tools] Chain info result:`, toolResult);
+
+      let chainText = `Unable to fetch chain information`;
+      if (toolResult?.content && toolResult.content[0]?.text) {
+        const chainData = JSON.parse(toolResult.content[0].text);
+        chainText = `Sei Network Information:\n\nNetwork: ${chainData.network}\nChain ID: ${chainData.chainId}\nLatest Block: ${chainData.blockNumber}\nRPC URL: ${chainData.rpcUrl}`;
+      }
+
+      return {
+        response: chainText,
+        usedMCP: true,
+      };
+    } catch (error) {
+      console.error("[MCP Tools] Chain info error:", error);
+      return {
+        response: `Sorry, I couldn't fetch chain information. Error: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        usedMCP: true,
+      };
+    }
+  }
+
+  // Check for file system queries
+  if (
+    lowerMessage.includes("file") ||
+    lowerMessage.includes("directory") ||
+    lowerMessage.includes("list")
+  ) {
+    console.log(`[MCP Tools] Filesystem query detected`);
+
+    try {
+      const toolResult = await mcpClient.callTool({
+        toolName: "list_directory",
+        serverName: "filesystem-server",
+        arguments: {
+          path: ".",
+        },
+      });
+
+      console.log(`[MCP Tools] Filesystem result:`, toolResult);
+
+      let fileText = `Unable to list directory contents`;
+      if (toolResult?.content && toolResult.content[0]?.text) {
+        fileText = `Directory contents:\n\n${toolResult.content[0].text}`;
+      }
+
+      return {
+        response: fileText,
+        usedMCP: true,
+      };
+    } catch (error) {
+      console.error("[MCP Tools] Filesystem error:", error);
+      return {
+        response: `Sorry, I couldn't access the filesystem. Error: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        usedMCP: true,
+      };
+    }
+  }
+
+  return { response: "", usedMCP: false };
+}
+
 // Helper function to check if MCP tools should be called based on message content
 async function shouldCallMCPTool(
   message: string,
@@ -159,21 +399,69 @@ async function shouldCallMCPTool(
   serverName?: string;
   args?: any;
 }> {
+  // First, try our SEI plugin for balance queries
+  console.log(`[shouldCallMCPTool] Checking if message should use SEI plugin`);
+
   const lowerMessage = message.toLowerCase();
+  const hasBalanceKeywords =
+    /\b(balance|bal|funds|amount|how much|what.*have)\b/i.test(message);
+  const hasAddress = /0x[a-fA-F0-9]{40}/.test(message);
+
+  if (hasBalanceKeywords && hasAddress) {
+    console.log(
+      `[shouldCallMCPTool] Balance query detected - will be handled by SEI plugin`
+    );
+    return { shouldCall: false }; // Let SEI plugin handle it
+  }
+
+  // Fallback to other tools...
+  console.log(`[shouldCallMCPTool] Processing message: "${message}"`);
+  console.log(`[shouldCallMCPTool] Lowercase message: "${lowerMessage}"`);
 
   try {
-    const tools = await mcpClient.listTools();
+    const tools = await mcpClient.getAllTools();
+    console.log(
+      `[shouldCallMCPTool] Retrieved ${tools.length} tools:`,
+      tools.map((t: any) => `${t.name} (${t.serverName})`)
+    );
 
-    // Check for balance-related queries
-    if (lowerMessage.includes("balance") || lowerMessage.includes("wallet")) {
-      const balanceTool = tools.find((tool: any) => tool.name === "balance");
-      if (balanceTool) {
-        return {
-          shouldCall: true,
-          toolName: "balance",
-          serverName: "sei-mcp-server",
-          args: {},
-        };
+    // Check for ERC20 token balance queries
+    if (lowerMessage.includes("token") && lowerMessage.includes("balance")) {
+      const addressMatches = message.match(/0x[a-fA-F0-9]{40}/g);
+      if (addressMatches && addressMatches.length >= 2) {
+        const tokenBalanceTool = tools.find(
+          (tool: any) => tool.name === "get_token_balance"
+        );
+        if (tokenBalanceTool) {
+          return {
+            shouldCall: true,
+            toolName: "get_token_balance",
+            serverName: "sei-mcp-server",
+            args: {
+              tokenAddress: addressMatches[0],
+              ownerAddress: addressMatches[1],
+            },
+          };
+        }
+      }
+    }
+
+    // Check for transaction queries
+    if (lowerMessage.includes("transaction") || lowerMessage.includes("tx")) {
+      const txHashMatch = message.match(/0x[a-fA-F0-9]{64}/);
+      if (txHashMatch) {
+        const txHash = txHashMatch[0];
+        const txTool = tools.find(
+          (tool: any) => tool.name === "get_transaction"
+        );
+        if (txTool) {
+          return {
+            shouldCall: true,
+            toolName: "get_transaction",
+            serverName: "sei-mcp-server",
+            args: { txHash },
+          };
+        }
       }
     }
 
@@ -199,9 +487,12 @@ async function shouldCallMCPTool(
 }
 
 export async function POST(request: NextRequest) {
+  console.log("\n🚀🚀🚀 [ELIZA-POST] POST function called! 🚀🚀🚀");
   try {
     const body = await request.json();
+    console.log("🔍 [ELIZA-POST] Request body:", JSON.stringify(body, null, 2));
     const { action, message, config } = body;
+    console.log("⚡ [ELIZA-POST] Action:", action, "Message:", message);
 
     switch (action) {
       case "connect":
@@ -295,8 +586,21 @@ export async function POST(request: NextRequest) {
         }
 
       case "send":
+      case "message":
+        console.log(
+          "[POST] Received send/message request with message:",
+          message
+        );
         try {
           if (!elizaAgent || !mcpClient || !elizaRuntime) {
+            console.log(
+              "[POST] Missing components - elizaAgent:",
+              !!elizaAgent,
+              "mcpClient:",
+              !!mcpClient,
+              "elizaRuntime:",
+              !!elizaRuntime
+            );
             return NextResponse.json(
               {
                 success: false,
@@ -327,39 +631,139 @@ export async function POST(request: NextRequest) {
           try {
             console.log("Eliza runtime available:", !!elizaRuntime);
 
-            // Check if we should call an MCP tool first
-            const toolCheck = await shouldCallMCPTool(message, mcpClient);
+            // First, try MCP tools for blockchain queries
+            console.log("Trying MCP tools first...");
+            const mcpResult = await processMessageWithMCPTools(
+              message,
+              mcpClient
+            );
+            console.log("MCP tools result:", mcpResult);
 
-            if (toolCheck.shouldCall) {
-              console.log(`Calling MCP tool: ${toolCheck.toolName}`);
-
-              // Call the MCP tool
-              const toolResult = await mcpClient.callTool({
-                toolName: toolCheck.toolName!,
-                serverName: toolCheck.serverName!,
-                arguments: toolCheck.args || {},
-              });
-
-              // Create enhanced message with tool result for Eliza
-              const enhancedMessage = `${message}\n\nMCP Tool Result from ${
-                toolCheck.toolName
-              }: ${JSON.stringify(toolResult, null, 2)}`;
-
-              // Process with Eliza runtime including tool result
-              response = await processWithElizaRuntime(
-                enhancedMessage,
-                elizaRuntime,
-                mcpClient,
-                mcpContext
+            if (mcpResult.usedMCP) {
+              console.log(
+                "MCP tools handled the message, now processing through AI..."
               );
+
+              // Try direct Google GenAI integration first
+              console.log("Attempting direct Google GenAI processing...");
+
+              try {
+                // Check if API key is available
+                const apiKey =
+                  process.env.GOOGLE_GENAI_API_KEY ||
+                  "AIzaSyBUC7fcpxGlnxJ6qlt0LerVkxpaZrURE0k";
+                console.log(
+                  "Google GenAI API Key available:",
+                  apiKey ? "YES" : "NO"
+                );
+
+                if (!apiKey) {
+                  throw new Error("Google GenAI API key not found");
+                }
+
+                // Direct Google GenAI API call
+                const { GoogleGenerativeAI } = await import(
+                  "@google/generative-ai"
+                );
+                const genAI = new GoogleGenerativeAI(apiKey);
+                const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+                const prompt = `User asked: "${message}"
+
+I retrieved this blockchain data:
+${mcpResult.response}
+
+Please provide a natural, helpful response to the user's question using this data. Be conversational and explain any technical information clearly. Keep the response concise but informative.`;
+
+                console.log(
+                  "Sending to Google GenAI:",
+                  prompt.substring(0, 200) + "..."
+                );
+
+                const result = await model.generateContent(prompt);
+                const aiResponse = result.response;
+                const text = aiResponse.text();
+
+                if (text && text.length > 10) {
+                  response = text;
+                  console.log(
+                    "Google GenAI response received:",
+                    response.substring(0, 100) + "..."
+                  );
+                } else {
+                  throw new Error("No valid response from Google GenAI");
+                }
+              } catch (genAIError) {
+                console.error("Direct Google GenAI error:", genAIError);
+
+                // Fallback to Eliza processing
+                console.log("Falling back to Eliza processing...");
+                const enhancedMessage = `The user asked: "${message}"
+
+I retrieved this blockchain data using MCP tools:
+${mcpResult.response}
+
+Please respond naturally to the user's question using this data. Be helpful, conversational, and explain any technical information clearly.`;
+
+                try {
+                  response = await processWithElizaRuntime(
+                    enhancedMessage,
+                    elizaRuntime,
+                    mcpClient,
+                    mcpContext
+                  );
+
+                  // If still getting fallback response, use friendly wrapper
+                  if (
+                    response.includes("I'm ready to help you") ||
+                    response.includes("development tasks")
+                  ) {
+                    response = `\n\n${mcpResult.response}`;
+                  }
+                } catch (elizaError) {
+                  console.error("Eliza processing error:", elizaError);
+                  response = `Here's the information I retrieved:\n\n${mcpResult.response}`;
+                }
+              }
+
+              console.log("AI-processed response:", response);
             } else {
-              // Process normally with Eliza runtime
-              response = await processWithElizaRuntime(
-                message,
-                elizaRuntime,
-                mcpClient,
-                mcpContext
-              );
+              // Check if we should call an MCP tool
+              console.log("About to call shouldCallMCPTool...");
+              const toolCheck = await shouldCallMCPTool(message, mcpClient);
+              console.log("shouldCallMCPTool result:", toolCheck);
+
+              if (toolCheck.shouldCall) {
+                console.log(`Calling MCP tool: ${toolCheck.toolName}`);
+
+                // Call the MCP tool
+                const toolResult = await mcpClient.callTool({
+                  toolName: toolCheck.toolName!,
+                  serverName: toolCheck.serverName!,
+                  arguments: toolCheck.args || {},
+                });
+
+                // Create enhanced message with tool result for Eliza
+                const enhancedMessage = `${message}\n\nMCP Tool Result from ${
+                  toolCheck.toolName
+                }: ${JSON.stringify(toolResult, null, 2)}`;
+
+                // Process with Eliza runtime including tool result
+                response = await processWithElizaRuntime(
+                  enhancedMessage,
+                  elizaRuntime,
+                  mcpClient,
+                  mcpContext
+                );
+              } else {
+                // Process normally with Eliza runtime
+                response = await processWithElizaRuntime(
+                  message,
+                  elizaRuntime,
+                  mcpClient,
+                  mcpContext
+                );
+              }
             }
           } catch (elizaError) {
             console.error("Eliza runtime error:", elizaError);
@@ -478,6 +882,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
+  console.log("[ROUTE] GET function called!");
   return NextResponse.json({
     success: true,
     connected: !!elizaAgent,

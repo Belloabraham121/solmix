@@ -5,6 +5,7 @@ import {
 } from "@elizaos/core";
 import { googleGenAIPlugin } from "@elizaos/plugin-google-genai";
 import mcpPlugin from "@elizaos/plugin-mcp";
+import seiPlugin from "./lib/eliza-sei-plugin.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -43,12 +44,12 @@ async function initializeAgent() {
       databaseAdapter: null, // Use in-memory for now
       token: process.env.ELIZA_TOKEN || "default-token",
       character: character,
-      plugins: [googleGenAIPlugin, mcpPlugin],
+      plugins: [googleGenAIPlugin, mcpPlugin, seiPlugin],
     });
 
     console.log("Eliza agent initialized successfully!");
     console.log("Character:", character.name);
-    console.log("Plugins loaded:", ["googleGenAI", "mcp"]);
+    console.log("Plugins loaded:", ["googleGenAI", "mcp", "sei-blockchain"]);
     console.log(
       "MCP servers configured:",
       Object.keys(character.settings?.mcp?.servers || {})

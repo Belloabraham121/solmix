@@ -2,6 +2,7 @@
   "name": "solmix",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "next build",
     "dev": "next dev",
@@ -13,6 +14,7 @@
     "@elizaos/core": "^1.4.2",
     "@elizaos/plugin-google-genai": "^1.0.2",
     "@elizaos/plugin-mcp": "^1.0.7",
+    "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.10.0",
     "@modelcontextprotocol/sdk": "^1.17.2",
     "@modelcontextprotocol/server-filesystem": "^2025.7.29",
