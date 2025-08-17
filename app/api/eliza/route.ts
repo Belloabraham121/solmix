@@ -242,7 +242,10 @@ async function processMessageWithMCPTools(
 
       let searchText = `Unable to find documentation for "${searchQuery}"`;
       if (toolResult?.content && toolResult.content[0]?.text) {
-        searchText = `Here's what I found in the Sei documentation:\n\n${toolResult.content[0].text}`;
+        // Return the raw data - it will be processed by Google GenAI later
+        const rawContent = toolResult.content[0].text;
+        console.log(`[MCP Tools] Raw documentation content:`, rawContent.substring(0, 200) + "...");
+        searchText = rawContent;
       }
 
       return {
@@ -666,14 +669,34 @@ export async function POST(request: NextRequest) {
                   "@google/generative-ai"
                 );
                 const genAI = new GoogleGenerativeAI(apiKey);
-                const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-                const prompt = `User asked: "${message}"
+                // Determine if this is a documentation search or other query type
+                const lowerMessage = message.toLowerCase();
+                const isDocumentationSearch = lowerMessage.includes("search") && (lowerMessage.includes("doc") || lowerMessage.includes("staking") || lowerMessage.includes("sei"));
+                
+                let prompt;
+                if (isDocumentationSearch) {
+                  prompt = `User asked: "${message}"
+
+I found this documentation content:
+${mcpResult.response}
+
+Please format and present this documentation in a clean, readable way. Extract the key information and organize it properly. Remove any HTML artifacts, garbled text, or formatting issues. Focus on:
+1. The main topic/title
+2. Key features and functionality
+3. Important technical details
+4. Any code examples or usage instructions
+
+Present the information in a well-structured, easy-to-read format that directly answers the user's question about ${message.replace(/search|docs|documentation|for|about|sei/gi, "").trim()}.`;
+                } else {
+                  prompt = `User asked: "${message}"
 
 I retrieved this blockchain data:
 ${mcpResult.response}
 
 Please provide a natural, helpful response to the user's question using this data. Be conversational and explain any technical information clearly. Keep the response concise but informative.`;
+                }
 
                 console.log(
                   "Sending to Google GenAI:",

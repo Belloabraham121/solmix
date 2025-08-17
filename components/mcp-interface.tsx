@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
 
 interface MCPMessage {
   id: string;
@@ -518,17 +519,14 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
             <span className="text-sm font-medium text-gray-300">
               MCP + Eliza
             </span>
-            <Badge
-              variant={isElizaConnected ? "default" : "secondary"}
-              className={cn(
-                "text-xs px-2 py-0.5",
-                isElizaConnected
-                  ? "bg-green-800 text-green-100"
-                  : "bg-gray-700 text-gray-300"
-              )}
-            >
-              {isElizaConnected ? "Eliza Connected" : "Eliza Disconnected"}
-            </Badge>
+            {isElizaConnected && (
+              <Badge
+                variant="default"
+                className="text-xs px-2 py-0.5 bg-green-800 text-green-100"
+              >
+                Eliza Connected
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {!isElizaConnected && (
@@ -726,7 +724,84 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
               </span>
             </div>
             <div className="text-gray-100 whitespace-pre-wrap break-words overflow-wrap-anywhere">
-              {message.content}
+              {message.type === "assistant" ? (
+                <div className="prose prose-sm prose-invert max-w-none">
+                  <ReactMarkdown
+                    components={{
+                      h1: ({ node, ...props }: any) => (
+                        <h1
+                          className="text-lg font-bold text-gray-100 mb-2"
+                          {...props}
+                        />
+                      ),
+                      h2: ({ node, ...props }: any) => (
+                        <h2
+                          className="text-base font-bold text-gray-100 mb-2"
+                          {...props}
+                        />
+                      ),
+                      h3: ({ node, ...props }: any) => (
+                        <h3
+                          className="text-sm font-bold text-gray-100 mb-1"
+                          {...props}
+                        />
+                      ),
+                      p: ({ node, ...props }: any) => (
+                        <p className="text-gray-100 mb-2 last:mb-0" {...props} />
+                      ),
+                      strong: ({ node, ...props }: any) => (
+                        <strong className="font-bold text-gray-50" {...props} />
+                      ),
+                      em: ({ node, ...props }: any) => (
+                        <em className="italic text-gray-200" {...props} />
+                      ),
+                      ul: ({ node, ...props }: any) => (
+                        <ul
+                          className="list-disc list-inside text-gray-100 mb-2 space-y-1"
+                          {...props}
+                        />
+                      ),
+                      ol: ({ node, ...props }: any) => (
+                        <ol
+                          className="list-decimal list-inside text-gray-100 mb-2 space-y-1"
+                          {...props}
+                        />
+                      ),
+                      li: ({ node, ...props }: any) => (
+                        <li className="text-gray-100" {...props} />
+                      ),
+                      code: ({ node, inline, ...props }: any) =>
+                        inline ? (
+                          <code
+                            className="bg-gray-800 text-green-300 px-1 rounded text-xs"
+                            {...props}
+                          />
+                        ) : (
+                          <code
+                            className="block bg-gray-800 text-green-300 p-2 rounded text-xs overflow-x-auto"
+                            {...props}
+                          />
+                        ),
+                      a: ({ node, ...props }: any) => (
+                        <a
+                          className="text-blue-400 hover:text-blue-300 underline"
+                          {...props}
+                        />
+                      ),
+                      blockquote: ({ node, ...props }: any) => (
+                        <blockquote
+                          className="border-l-4 border-gray-600 pl-4 text-gray-300 italic"
+                          {...props}
+                        />
+                      ),
+                    }}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                message.content
+              )}
             </div>
           </div>
         ))}
@@ -840,15 +915,12 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
             {/* Status indicators */}
             <div className="flex items-center justify-between text-xs text-gray-500">
               <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1">
-                  <div
-                    className={cn(
-                      "w-2 h-2 rounded-full",
-                      isElizaConnected ? "bg-green-500" : "bg-red-500"
-                    )}
-                  />
-                  Eliza {isElizaConnected ? "Connected" : "Disconnected"}
-                </span>
+                {isElizaConnected && (
+                  <span className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    Eliza Connected
+                  </span>
+                )}
                 <span className="flex items-center gap-1">
                   <div
                     className={cn(
