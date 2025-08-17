@@ -50,10 +50,7 @@ async function initializeAgent() {
     console.log("Eliza agent initialized successfully!");
     console.log("Character:", character.name);
     console.log("Plugins loaded:", ["googleGenAI", "mcp", "sei-blockchain"]);
-    console.log(
-      "MCP servers configured:",
-      Object.keys(character.settings?.mcp?.servers || {})
-    );
+
 
     return runtime;
   } catch (error) {

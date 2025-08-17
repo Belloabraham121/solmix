@@ -1,14 +1,38 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Send, Settings, CheckCircle, Wrench, X, Zap, AlertCircle, Server, Plug, PlugZap, ChevronDown } from "lucide-react";
+import {
+  Send,
+  Settings,
+  CheckCircle,
+  Wrench,
+  X,
+  Zap,
+  AlertCircle,
+  Server,
+  Plug,
+  PlugZap,
+  ChevronDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
@@ -18,8 +42,6 @@ interface MCPMessage {
   content: string;
   timestamp: Date;
 }
-
-
 
 interface MCPTool {
   name: string;
@@ -31,7 +53,7 @@ interface MCPServer {
   id: string;
   name: string;
   description: string;
-  status: 'connected' | 'disconnected' | 'connecting' | 'error';
+  status: "connected" | "disconnected" | "connecting" | "error";
   tools: MCPTool[];
   category?: string;
 }
@@ -69,42 +91,35 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
   const fetchMCPServers = async () => {
     try {
       setIsInitializing(true);
-      const response = await fetch('/api/mcp/status');
-      
+      const response = await fetch("/api/mcp/status");
+
       // Check if response is actually JSON
-      const contentType = response.headers.get('content-type');
-      console.log('MCP Status API Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        contentType,
-        url: response.url
-      });
-      
+      const contentType = response.headers.get("content-type");
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
-      if (!contentType || !contentType.includes('application/json')) {
+
+      if (!contentType || !contentType.includes("application/json")) {
         const text = await response.text();
-        console.error('Expected JSON but got:', text.substring(0, 200));
-        throw new Error('API returned non-JSON response');
+        throw new Error("API returned non-JSON response");
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success && data.data) {
         const servers: MCPServer[] = data.data.servers.map((server: any) => ({
           id: server.id || server.name,
           name: server.name,
-          description: server.description || 'No description available',
-          status: server.status === 'connected' ? 'connected' : 'disconnected',
+          description: server.description || "No description available",
+          status: server.status === "connected" ? "connected" : "disconnected",
           tools: server.tools || [],
-          category: server.category
+          category: server.category,
         }));
         setMcpServers(servers);
       }
     } catch (error) {
-      console.error('Failed to fetch MCP servers:', error);
+      // Error handled silently
     } finally {
       setIsInitializing(false);
     }
@@ -112,122 +127,139 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
 
   const handleConnectServer = async (serverId: string) => {
     try {
-      setMcpServers(prev => prev.map(server => 
-        server.id === serverId ? { ...server, status: 'connecting' } : server
-      ));
+      setMcpServers((prev) =>
+        prev.map((server) =>
+          server.id === serverId ? { ...server, status: "connecting" } : server
+        )
+      );
 
-      const response = await fetch('/api/mcp/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serverId })
+      const response = await fetch("/api/mcp/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serverId }),
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
-        setMcpServers(prev => prev.map(server => 
-          server.id === serverId ? { ...server, status: 'connected', tools: result.tools || [] } : server
-        ));
-        
+        setMcpServers((prev) =>
+          prev.map((server) =>
+            server.id === serverId
+              ? { ...server, status: "connected", tools: result.tools || [] }
+              : server
+          )
+        );
+
         const connectMessage: MCPMessage = {
           id: Date.now().toString(),
           type: "system",
           content: `Connected to ${serverId} MCP server successfully.`,
           timestamp: new Date(),
         };
-        setMessages(prev => [...prev, connectMessage]);
+        setMessages((prev) => [...prev, connectMessage]);
       } else {
-        throw new Error(result.error || 'Failed to connect');
+        throw new Error(result.error || "Failed to connect");
       }
     } catch (error) {
-      setMcpServers(prev => prev.map(server => 
-        server.id === serverId ? { ...server, status: 'error' } : server
-      ));
-      
+      setMcpServers((prev) =>
+        prev.map((server) =>
+          server.id === serverId ? { ...server, status: "error" } : server
+        )
+      );
+
       const errorMessage: MCPMessage = {
         id: Date.now().toString(),
         type: "system",
-        content: `Failed to connect to ${serverId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        content: `Failed to connect to ${serverId}: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     }
   };
 
   const handleDisconnectServer = async (serverId: string) => {
     try {
-      const response = await fetch('/api/mcp/disconnect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serverId })
+      const response = await fetch("/api/mcp/disconnect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serverId }),
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
-        setMcpServers(prev => prev.map(server => 
-          server.id === serverId ? { ...server, status: 'disconnected', tools: [] } : server
-        ));
-        
+        setMcpServers((prev) =>
+          prev.map((server) =>
+            server.id === serverId
+              ? { ...server, status: "disconnected", tools: [] }
+              : server
+          )
+        );
+
         const disconnectMessage: MCPMessage = {
           id: Date.now().toString(),
           type: "system",
           content: `Disconnected from ${serverId} MCP server.`,
           timestamp: new Date(),
         };
-        setMessages(prev => [...prev, disconnectMessage]);
+        setMessages((prev) => [...prev, disconnectMessage]);
       }
     } catch (error) {
-      console.error('Failed to disconnect server:', error);
+      // Error handled silently
     }
   };
 
   const handleConnectEliza = async () => {
     try {
-      const response = await fetch('/api/eliza', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'connect' })
+      const response = await fetch("/api/eliza", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "connect" }),
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         setIsElizaConnected(true);
         setElizaAgent(result.agent);
-        
+
         const connectMessage: MCPMessage = {
           id: Date.now().toString(),
           type: "system",
-          content: "Connected to Eliza AI agent successfully. You can now start chatting!",
+          content:
+            "Connected to Eliza AI agent successfully. You can now start chatting!",
           timestamp: new Date(),
         };
-        setMessages(prev => [...prev, connectMessage]);
+        setMessages((prev) => [...prev, connectMessage]);
       } else {
-        throw new Error(result.error || 'Failed to connect to Eliza');
+        throw new Error(result.error || "Failed to connect to Eliza");
       }
     } catch (error) {
       const errorMessage: MCPMessage = {
         id: Date.now().toString(),
         type: "system",
-        content: `Failed to connect to Eliza: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        content: `Failed to connect to Eliza: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     }
   };
 
   const handleDisconnect = async () => {
     try {
-      await fetch('/api/eliza', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'disconnect' })
+      await fetch("/api/eliza", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "disconnect" }),
       });
     } catch (error) {
-      console.error('Error disconnecting:', error);
+      // Error handled silently
     }
-    
+
     setIsElizaConnected(false);
     setElizaAgent(null);
     const disconnectMessage: MCPMessage = {
@@ -242,52 +274,105 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
   // Intelligent MCP routing based on user prompt analysis
   const analyzePromptForMCPRouting = (message: string): string | null => {
     const lowerMessage = message.toLowerCase();
-    
+
     // Filesystem-related keywords
     const filesystemKeywords = [
-      'file', 'folder', 'directory', 'read', 'write', 'save', 'load', 'open',
-      'create file', 'delete file', 'list files', 'browse', 'path', 'upload',
-      'download', 'copy', 'move', 'rename', 'filesystem', 'storage'
+      "file",
+      "folder",
+      "directory",
+      "read",
+      "write",
+      "save",
+      "load",
+      "open",
+      "create file",
+      "delete file",
+      "list files",
+      "browse",
+      "path",
+      "upload",
+      "download",
+      "copy",
+      "move",
+      "rename",
+      "filesystem",
+      "storage",
     ];
-    
+
     // Memory/Knowledge graph keywords
     const memoryKeywords = [
-      'remember', 'recall', 'memory', 'knowledge', 'entity', 'relation',
-      'graph', 'node', 'connection', 'store information', 'retrieve',
-      'search knowledge', 'find entity', 'create entity', 'knowledge base',
-      'semantic', 'ontology', 'facts', 'learn', 'memorize'
+      "remember",
+      "recall",
+      "memory",
+      "knowledge",
+      "entity",
+      "relation",
+      "graph",
+      "node",
+      "connection",
+      "store information",
+      "retrieve",
+      "search knowledge",
+      "find entity",
+      "create entity",
+      "knowledge base",
+      "semantic",
+      "ontology",
+      "facts",
+      "learn",
+      "memorize",
     ];
-    
+
     // Blockchain/Sei-related keywords
     const blockchainKeywords = [
-      'blockchain', 'sei', 'balance', 'wallet', 'transaction', 'chain',
-      'crypto', 'token', 'smart contract', 'defi', 'dapp', 'web3',
-      'cosmos', 'validator', 'staking', 'governance', 'ibc', 'tendermint',
-      'gas', 'fee', 'block', 'consensus', 'documentation', 'docs'
+      "blockchain",
+      "sei",
+      "balance",
+      "wallet",
+      "transaction",
+      "chain",
+      "crypto",
+      "token",
+      "smart contract",
+      "defi",
+      "dapp",
+      "web3",
+      "cosmos",
+      "validator",
+      "staking",
+      "governance",
+      "ibc",
+      "tendermint",
+      "gas",
+      "fee",
+      "block",
+      "consensus",
+      "documentation",
+      "docs",
     ];
-    
+
     // Count keyword matches for each category
-    const filesystemScore = filesystemKeywords.filter(keyword => 
+    const filesystemScore = filesystemKeywords.filter((keyword) =>
       lowerMessage.includes(keyword)
     ).length;
-    
-    const memoryScore = memoryKeywords.filter(keyword => 
+
+    const memoryScore = memoryKeywords.filter((keyword) =>
       lowerMessage.includes(keyword)
     ).length;
-    
-    const blockchainScore = blockchainKeywords.filter(keyword => 
+
+    const blockchainScore = blockchainKeywords.filter((keyword) =>
       lowerMessage.includes(keyword)
     ).length;
-    
+
     // Determine the best match
     const maxScore = Math.max(filesystemScore, memoryScore, blockchainScore);
-    
+
     if (maxScore === 0) return null; // No clear match, let user choose
-    
-    if (filesystemScore === maxScore) return 'filesystem-server';
-    if (memoryScore === maxScore) return 'memory-server';
-    if (blockchainScore === maxScore) return 'sei-mcp-server';
-    
+
+    if (filesystemScore === maxScore) return "filesystem-server";
+    if (memoryScore === maxScore) return "memory-server";
+    if (blockchainScore === maxScore) return "sei-mcp-server";
+
     return null;
   };
 
@@ -310,14 +395,19 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
       // Intelligent MCP routing: auto-select server if none is selected
       let contextToUse = selectedMCPContext;
       let routingMessage = "";
-      
+
       if (!selectedMCPContext) {
         const suggestedServer = analyzePromptForMCPRouting(messageToSend);
-        if (suggestedServer && mcpServers.find(s => s.id === suggestedServer)) {
+        if (
+          suggestedServer &&
+          mcpServers.find((s) => s.id === suggestedServer)
+        ) {
           contextToUse = suggestedServer;
-          const serverName = mcpServers.find(s => s.id === suggestedServer)?.name;
+          const serverName = mcpServers.find(
+            (s) => s.id === suggestedServer
+          )?.name;
           routingMessage = `🤖 Auto-routed to ${serverName} based on your query.`;
-          
+
           // Add routing notification message
           const routingNotification: MCPMessage = {
             id: (Date.now() - 1).toString(),
@@ -328,27 +418,30 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
           setMessages((prev) => [...prev, routingNotification]);
         }
       }
-      
+
       // Prepare MCP context information
-      const mcpContext = contextToUse ? {
-        serverId: contextToUse,
-        serverName: mcpServers.find(s => s.id === contextToUse)?.name,
-        availableTools: mcpServers.find(s => s.id === contextToUse)?.tools || []
-      } : null;
+      const mcpContext = contextToUse
+        ? {
+            serverId: contextToUse,
+            serverName: mcpServers.find((s) => s.id === contextToUse)?.name,
+            availableTools:
+              mcpServers.find((s) => s.id === contextToUse)?.tools || [],
+          }
+        : null;
 
       // Send message to Eliza agent via API with MCP context
-      const response = await fetch('/api/eliza', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'send', 
+      const response = await fetch("/api/eliza", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "send",
           message: messageToSend,
-          mcpContext: mcpContext
-        })
+          mcpContext: mcpContext,
+        }),
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         const assistantMessage: MCPMessage = {
           id: (Date.now() + 1).toString(),
@@ -358,14 +451,17 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
         };
         setMessages((prev) => [...prev, assistantMessage]);
       } else {
-        throw new Error(result.error || 'Failed to get response');
+        throw new Error(result.error || "Failed to get response");
       }
     } catch (error) {
-      console.error('Error sending message to Eliza:', error);
       const errorMessage: MCPMessage = {
         id: (Date.now() + 1).toString(),
         type: "system",
-        content: `Error: ${error instanceof Error ? error.message : 'Failed to get response from agent'}`,
+        content: `Error: ${
+          error instanceof Error
+            ? error.message
+            : "Failed to get response from agent"
+        }`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -383,27 +479,26 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
 
   const fetchAvailableTools = async () => {
     try {
-      const response = await fetch('/api/mcp/status');
+      const response = await fetch("/api/mcp/status");
       const data = await response.json();
-      
+
       if (data.success && data.data) {
         const tools: MCPTool[] = [];
-        
+
         // Extract tools from the allTools array in the response
         if (data.data.allTools && Array.isArray(data.data.allTools)) {
           data.data.allTools.forEach((tool: any) => {
             tools.push({
               name: tool.name,
-              description: tool.description || 'No description available',
-              serverName: tool.serverName || 'Unknown'
+              description: tool.description || "No description available",
+              serverName: tool.serverName || "Unknown",
             });
           });
         }
-        
+
         setAvailableTools(tools);
       }
     } catch (error) {
-      console.error('Failed to fetch available tools:', error);
       setAvailableTools([]);
     }
   };
@@ -470,7 +565,9 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                     <div className="text-center py-8 text-slate-400">
                       <Wrench className="w-12 h-12 mx-auto mb-4 opacity-50" />
                       <p>No tools available</p>
-                      <p className="text-sm mt-2">Connect to MCP servers to access their tools</p>
+                      <p className="text-sm mt-2">
+                        Connect to MCP servers to access their tools
+                      </p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -480,8 +577,13 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                           className="p-4 bg-slate-700 rounded-lg border border-slate-600 hover:border-slate-500 transition-colors"
                         >
                           <div className="flex items-start justify-between mb-2">
-                            <h3 className="font-medium text-slate-100 text-sm">{tool.name}</h3>
-                            <Badge variant="outline" className="text-xs bg-slate-600 text-slate-300 border-slate-500">
+                            <h3 className="font-medium text-slate-100 text-sm">
+                              {tool.name}
+                            </h3>
+                            <Badge
+                              variant="outline"
+                              className="text-xs bg-slate-600 text-slate-300 border-slate-500"
+                            >
                               {tool.serverName}
                             </Badge>
                           </div>
@@ -492,7 +594,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                             size="sm"
                             className="w-full mt-3 h-7 text-xs bg-orange-600 hover:bg-orange-700"
                             onClick={() => {
-                              console.log('Using tool:', tool.name, 'from server:', tool.serverName);
+                              // Tool usage would be implemented here
                             }}
                           >
                             <Zap className="w-3 h-3 mr-1" />
@@ -521,34 +623,49 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
         {showServerConfig && (
           <div className="space-y-2">
             <Separator className="bg-slate-700" />
-            <div className="text-xs font-medium text-slate-300 mb-2">MCP Servers</div>
+            <div className="text-xs font-medium text-slate-300 mb-2">
+              MCP Servers
+            </div>
             {isInitializing ? (
-              <div className="text-xs text-slate-400 py-2">Loading servers...</div>
+              <div className="text-xs text-slate-400 py-2">
+                Loading servers...
+              </div>
             ) : (
               <div className="space-y-2 max-h-32 overflow-y-auto">
                 {mcpServers.map((server) => (
-                  <div key={server.id} className="flex items-center justify-between p-2 bg-slate-700 rounded text-xs">
+                  <div
+                    key={server.id}
+                    className="flex items-center justify-between p-2 bg-slate-700 rounded text-xs"
+                  >
                     <div className="flex items-center gap-2 flex-1">
                       <Server className="w-3 h-3 text-slate-400" />
                       <div className="flex-1">
-                        <div className="text-slate-200 font-medium">{server.name}</div>
-                        <div className="text-slate-400 text-xs truncate">{server.description}</div>
+                        <div className="text-slate-200 font-medium">
+                          {server.name}
+                        </div>
+                        <div className="text-slate-400 text-xs truncate">
+                          {server.description}
+                        </div>
                       </div>
                       <Badge
                         variant="outline"
                         className={cn(
                           "text-xs px-1 py-0",
-                          server.status === 'connected' && "bg-green-600/20 text-green-400 border-green-600/30",
-                          server.status === 'disconnected' && "bg-slate-600/20 text-slate-400 border-slate-600/30",
-                          server.status === 'connecting' && "bg-yellow-600/20 text-yellow-400 border-yellow-600/30",
-                          server.status === 'error' && "bg-red-600/20 text-red-400 border-red-600/30"
+                          server.status === "connected" &&
+                            "bg-green-600/20 text-green-400 border-green-600/30",
+                          server.status === "disconnected" &&
+                            "bg-slate-600/20 text-slate-400 border-slate-600/30",
+                          server.status === "connecting" &&
+                            "bg-yellow-600/20 text-yellow-400 border-yellow-600/30",
+                          server.status === "error" &&
+                            "bg-red-600/20 text-red-400 border-red-600/30"
                         )}
                       >
                         {server.status}
                       </Badge>
                     </div>
                     <div className="flex items-center gap-1 ml-2">
-                      {server.status === 'connected' ? (
+                      {server.status === "connected" ? (
                         <Button
                           onClick={() => handleDisconnectServer(server.id)}
                           size="sm"
@@ -562,7 +679,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                           onClick={() => handleConnectServer(server.id)}
                           size="sm"
                           className="h-6 w-6 p-0 bg-green-600 hover:bg-green-700"
-                          disabled={server.status === 'connecting'}
+                          disabled={server.status === "connecting"}
                         >
                           <Plug className="w-3 h-3" />
                         </Button>
@@ -576,15 +693,13 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
         )}
       </div>
 
-
-
       {/* Messages Area */}
       <div className="flex-1 overflow-auto p-3 space-y-2">
         {messages.map((message) => (
           <div
             key={message.id}
             className={cn(
-              "p-2 rounded text-xs",
+              "p-2 rounded text-xs max-w-full",
               message.type === "user" &&
                 "bg-blue-600/20 border border-blue-600/30 ml-4",
               message.type === "assistant" &&
@@ -610,7 +725,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                 {message.timestamp.toLocaleTimeString()}
               </span>
             </div>
-            <div className="text-slate-100 whitespace-pre-wrap">
+            <div className="text-slate-100 whitespace-pre-wrap break-words overflow-wrap-anywhere">
               {message.content}
             </div>
           </div>
@@ -628,50 +743,61 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
         <div className="p-3 bg-slate-800 border-t border-slate-700">
           <div className="space-y-2">
             {/* MCP Context Selection */}
-             <div className="flex items-center gap-2">
-               <span className="text-xs text-slate-400 min-w-fit">Use MCP:</span>
-               <Select value={selectedMCPContext} onValueChange={setSelectedMCPContext}>
-                 <SelectTrigger className="h-7 text-xs bg-slate-700 border-slate-600 text-slate-300">
-                   <SelectValue placeholder="Select MCP Server" />
-                 </SelectTrigger>
-                 <SelectContent className="bg-slate-700 border-slate-600">
-                   {mcpServers
-                     .filter(server => server.status === 'connected')
-                     .map((server) => (
-                       <SelectItem key={server.id} value={server.id} className="text-slate-300 hover:bg-slate-600">
-                         <div className="flex items-center gap-2">
-                           <Server className="w-3 h-3" />
-                           {server.name}
-                         </div>
-                       </SelectItem>
-                     ))}
-                 </SelectContent>
-               </Select>
-               {selectedMCPContext && (
-                 <Button
-                   onClick={() => setSelectedMCPContext('')}
-                   variant="ghost"
-                   size="sm"
-                   className="h-7 w-7 p-0 text-slate-400 hover:text-white"
-                   title="Clear MCP selection"
-                 >
-                   <X className="w-3 h-3" />
-                 </Button>
-               )}
-             </div>
-            
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 min-w-fit">Use MCP:</span>
+              <Select
+                value={selectedMCPContext}
+                onValueChange={setSelectedMCPContext}
+              >
+                <SelectTrigger className="h-7 text-xs bg-slate-700 border-slate-600 text-slate-300">
+                  <SelectValue placeholder="Select MCP Server" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-700 border-slate-600">
+                  {mcpServers
+                    .filter((server) => server.status === "connected")
+                    .map((server) => (
+                      <SelectItem
+                        key={server.id}
+                        value={server.id}
+                        className="text-slate-300 hover:bg-slate-600"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Server className="w-3 h-3" />
+                          {server.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {selectedMCPContext && (
+                <Button
+                  onClick={() => setSelectedMCPContext("")}
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-slate-400 hover:text-white"
+                  title="Clear MCP selection"
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
+
             {/* Chat Input */}
             <div className="flex gap-2">
-              <div className="flex-1 relative">
+              <div className="flex-1 relative overflow-hidden">
                 <Textarea
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder={selectedMCPContext 
-                     ? `Type your message... (Using ${mcpServers.find(s => s.id === selectedMCPContext)?.name || 'selected MCP'})`
-                     : "Type your message... (AI will auto-route to the best MCP server based on your query)"
-                   }
-                  className="w-full min-h-[80px] max-h-[120px] p-3 bg-slate-700 border border-slate-600 rounded-md text-slate-100 placeholder-slate-400 focus:border-orange-500 focus:outline-none resize-none text-sm"
+                  placeholder={
+                    selectedMCPContext
+                      ? `Type your message... (Using ${
+                          mcpServers.find((s) => s.id === selectedMCPContext)
+                            ?.name || "selected MCP"
+                        })`
+                      : "Type your message... (AI will auto-route to the best MCP server based on your query)"
+                  }
+                  className="w-full min-h-[80px] max-h-[120px] p-3 bg-slate-700 border border-slate-600 rounded-md text-slate-100 placeholder-slate-400 focus:border-orange-500 focus:outline-none resize-none text-sm break-words overflow-wrap-anywhere word-break-break-all overflow-hidden"
                   disabled={isLoading}
                   rows={3}
                 />
@@ -710,23 +836,30 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                 </Button>
               </div>
             </div>
-            
+
             {/* Status indicators */}
             <div className="flex items-center justify-between text-xs text-slate-500">
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1">
-                  <div className={cn(
-                    "w-2 h-2 rounded-full",
-                    isElizaConnected ? "bg-green-500" : "bg-red-500"
-                  )} />
-                  Eliza {isElizaConnected ? 'Connected' : 'Disconnected'}
+                  <div
+                    className={cn(
+                      "w-2 h-2 rounded-full",
+                      isElizaConnected ? "bg-green-500" : "bg-red-500"
+                    )}
+                  />
+                  Eliza {isElizaConnected ? "Connected" : "Disconnected"}
                 </span>
                 <span className="flex items-center gap-1">
-                  <div className={cn(
-                    "w-2 h-2 rounded-full",
-                    mcpServers.some(s => s.status === 'connected') ? "bg-green-500" : "bg-red-500"
-                  )} />
-                  {mcpServers.filter(s => s.status === 'connected').length} MCP(s) Connected
+                  <div
+                    className={cn(
+                      "w-2 h-2 rounded-full",
+                      mcpServers.some((s) => s.status === "connected")
+                        ? "bg-green-500"
+                        : "bg-red-500"
+                    )}
+                  />
+                  {mcpServers.filter((s) => s.status === "connected").length}{" "}
+                  MCP(s) Connected
                 </span>
               </div>
               <div className="text-slate-600">
