@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { type FileTreeNode } from "@/lib/file-system";
 
 export default function Solmix() {
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode] = useState(true); // Always dark mode
   const [consoleHeight, setConsoleHeight] = useState(200); // Default 200px height
   const [compilerWidth, setCompilerWidth] = useState(320); // 320px = w-80
   const [isResizing, setIsResizing] = useState(false);
@@ -151,15 +151,10 @@ export default function Solmix() {
   };
 
   return (
-    <div
-      className={cn(
-        "h-screen flex flex-col bg-slate-900 text-slate-100",
-        isDarkMode ? "dark" : ""
-      )}
-    >
+    <div className="h-screen flex flex-col bg-black text-white">
       <IDEHeader
         isDarkMode={isDarkMode}
-        onThemeToggle={() => setIsDarkMode(!isDarkMode)}
+        onThemeToggle={() => {}}
       />
 
       <div className="flex items-center justify-between">
@@ -182,7 +177,7 @@ export default function Solmix() {
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar - File Explorer */}
         {isFileExplorerVisible && (
-          <aside className="w-64 bg-slate-850 border-r border-slate-700 flex flex-col">
+          <aside className="w-64 bg-gray-900 border-r border-gray-700 flex flex-col">
             <FileExplorer
               onFileSelect={handleFileSelect}
               onClose={() => setIsFileExplorerVisible(false)}
@@ -207,7 +202,7 @@ export default function Solmix() {
 
         {/* Right Sidebar - Compiler & MCP */}
         <aside
-          className="bg-slate-850 border-l border-slate-700 flex flex-col relative h-full"
+          className="bg-gray-900 border-l border-gray-700 flex flex-col relative h-full"
           style={{ width: `${compilerWidth}px` }}
         >
           <div
@@ -220,7 +215,7 @@ export default function Solmix() {
             onMouseDown={handleMouseDown}
             style={{ marginLeft: "-4px" }}
           >
-            <div className="w-0.5 h-8 bg-slate-600 group-hover:bg-orange-500 transition-colors" />
+            <div className="w-0.5 h-8 bg-gray-600 group-hover:bg-blue-500 transition-colors" />
           </div>
 
           <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -229,16 +224,16 @@ export default function Solmix() {
               onValueChange={setActiveRightTab}
               className="flex flex-col h-full"
             >
-              <TabsList className="grid w-full grid-cols-2 bg-slate-800 border-b border-slate-700 rounded-none h-10">
+              <TabsList className="grid w-full grid-cols-2 bg-gray-800 border-b border-gray-700 rounded-none h-10">
                 <TabsTrigger
                   value="compiler"
-                  className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-orange-400"
+                  className="text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-blue-400"
                 >
                   Compiler
                 </TabsTrigger>
                 <TabsTrigger
                   value="mcp"
-                  className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-orange-400"
+                  className="text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-blue-400"
                 >
                   MCP + Eliza
                 </TabsTrigger>
@@ -275,7 +270,7 @@ export default function Solmix() {
             onMouseDown={handleVerticalMouseDown}
             style={{ marginTop: "-4px" }}
           >
-            <div className="w-8 h-0.5 bg-slate-600 group-hover:bg-orange-500 transition-colors" />
+            <div className="w-8 h-0.5 bg-gray-600 group-hover:bg-blue-500 transition-colors" />
           </div>
 
           <ConsolePanel

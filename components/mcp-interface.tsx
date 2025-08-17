@@ -511,11 +511,11 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {/* Header */}
-      <div className="bg-slate-800 border-b border-slate-700 p-3 space-y-3">
+      <div className="bg-gray-900 border-b border-gray-700 p-3 space-y-3">
         {/* Title and Eliza Status */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-300">
+            <span className="text-sm font-medium text-gray-300">
               MCP + Eliza
             </span>
             <Badge
@@ -523,8 +523,8 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
               className={cn(
                 "text-xs px-2 py-0.5",
                 isElizaConnected
-                  ? "bg-green-600 text-white"
-                  : "bg-slate-600 text-slate-300"
+                  ? "bg-green-800 text-green-100"
+                  : "bg-gray-700 text-gray-300"
               )}
             >
               {isElizaConnected ? "Eliza Connected" : "Eliza Disconnected"}
@@ -535,7 +535,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
               <Button
                 onClick={handleConnectEliza}
                 size="sm"
-                className="h-7 text-xs bg-blue-600 hover:bg-blue-700"
+                className="h-7 text-xs bg-blue-800 hover:bg-blue-700"
               >
                 <PlugZap className="w-3 h-3 mr-1" />
                 Connect Eliza
@@ -546,23 +546,23 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 w-7 p-0 text-slate-400 hover:text-white hover:bg-slate-700"
+                  className="h-7 w-7 p-0 text-gray-400 hover:text-white hover:bg-gray-700"
                   onClick={handleShowTools}
                   title="Show Available MCP Tools"
                 >
                   <Wrench className="w-3 h-3" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] bg-slate-800 border-slate-700">
+              <DialogContent className="max-w-4xl max-h-[80vh] bg-gray-900 border-gray-700">
                 <DialogHeader>
-                  <DialogTitle className="text-slate-100 flex items-center gap-2">
+                  <DialogTitle className="text-gray-100 flex items-center gap-2">
                     <Wrench className="w-5 h-5" />
                     Available MCP Tools ({availableTools.length})
                   </DialogTitle>
                 </DialogHeader>
                 <ScrollArea className="max-h-[60vh] pr-4">
                   {availableTools.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400">
+                    <div className="text-center py-8 text-gray-400">
                       <Wrench className="w-12 h-12 mx-auto mb-4 opacity-50" />
                       <p>No tools available</p>
                       <p className="text-sm mt-2">
@@ -574,25 +574,25 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                       {availableTools.map((tool, index) => (
                         <div
                           key={`${tool.serverName}-${tool.name}-${index}`}
-                          className="p-4 bg-slate-700 rounded-lg border border-slate-600 hover:border-slate-500 transition-colors"
+                          className="p-4 bg-gray-800 rounded-lg border border-gray-600 hover:border-gray-500 transition-colors"
                         >
                           <div className="flex items-start justify-between mb-2">
-                            <h3 className="font-medium text-slate-100 text-sm">
+                            <h3 className="font-medium text-gray-100 text-sm">
                               {tool.name}
                             </h3>
                             <Badge
                               variant="outline"
-                              className="text-xs bg-slate-600 text-slate-300 border-slate-500"
+                              className="text-xs bg-gray-700 text-gray-300 border-gray-600"
                             >
                               {tool.serverName}
                             </Badge>
                           </div>
-                          <p className="text-xs text-slate-400 leading-relaxed">
+                          <p className="text-xs text-gray-400 leading-relaxed">
                             {tool.description}
                           </p>
                           <Button
                             size="sm"
-                            className="w-full mt-3 h-7 text-xs bg-orange-600 hover:bg-orange-700"
+                            className="w-full mt-3 h-7 text-xs bg-blue-800 hover:bg-blue-700"
                             onClick={() => {
                               // Tool usage would be implemented here
                             }}
@@ -654,7 +654,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                           server.status === "connected" &&
                             "bg-green-600/20 text-green-400 border-green-600/30",
                           server.status === "disconnected" &&
-                            "bg-slate-600/20 text-slate-400 border-slate-600/30",
+                            "bg-gray-700/20 text-gray-400 border-gray-700/30",
                           server.status === "connecting" &&
                             "bg-yellow-600/20 text-yellow-400 border-yellow-600/30",
                           server.status === "error" &&
@@ -670,7 +670,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                           onClick={() => handleDisconnectServer(server.id)}
                           size="sm"
                           variant="outline"
-                          className="h-6 w-6 p-0 border-slate-600 text-slate-400 hover:text-white hover:bg-slate-600"
+                          className="h-6 w-6 p-0 border-gray-600 text-gray-400 hover:text-white hover:bg-gray-600"
                         >
                           <X className="w-3 h-3" />
                         </Button>
@@ -705,7 +705,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
               message.type === "assistant" &&
                 "bg-green-600/20 border border-green-600/30 mr-4",
               message.type === "system" &&
-                "bg-slate-700/50 border border-slate-600/50 text-slate-300"
+                "bg-gray-800/50 border border-gray-700/50 text-gray-300"
             )}
           >
             <div className="flex items-center gap-2 mb-1">
@@ -716,23 +716,23 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                 <div className="w-2 h-2 bg-green-500 rounded-full" />
               )}
               {message.type === "system" && (
-                <div className="w-2 h-2 bg-slate-500 rounded-full" />
+                <div className="w-2 h-2 bg-gray-500 rounded-full" />
               )}
-              <span className="text-xs text-slate-400 capitalize">
+              <span className="text-xs text-gray-400 capitalize">
                 {message.type === "assistant" ? "Eliza" : message.type}
               </span>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-gray-500">
                 {message.timestamp.toLocaleTimeString()}
               </span>
             </div>
-            <div className="text-slate-100 whitespace-pre-wrap break-words overflow-wrap-anywhere">
+            <div className="text-gray-100 whitespace-pre-wrap break-words overflow-wrap-anywhere">
               {message.content}
             </div>
           </div>
         ))}
         {isLoading && (
-          <div className="flex items-center gap-2 text-xs text-slate-400 p-2">
-            <div className="w-3 h-3 border border-slate-400 border-t-transparent rounded-full animate-spin" />
+          <div className="flex items-center gap-2 text-xs text-gray-400 p-2">
+            <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
             Eliza is thinking...
           </div>
         )}
@@ -740,26 +740,26 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
 
       {/* Input Area */}
       {isElizaConnected && (
-        <div className="p-3 bg-slate-800 border-t border-slate-700">
+        <div className="p-3 bg-gray-900 border-t border-gray-700">
           <div className="space-y-2">
             {/* MCP Context Selection */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 min-w-fit">Use MCP:</span>
+              <span className="text-xs text-gray-400 min-w-fit">Use MCP:</span>
               <Select
                 value={selectedMCPContext}
                 onValueChange={setSelectedMCPContext}
               >
-                <SelectTrigger className="h-7 text-xs bg-slate-700 border-slate-600 text-slate-300">
+                <SelectTrigger className="h-7 text-xs bg-gray-800 border-gray-600 text-gray-300">
                   <SelectValue placeholder="Select MCP Server" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-700 border-slate-600">
+                <SelectContent className="bg-gray-800 border-gray-600">
                   {mcpServers
                     .filter((server) => server.status === "connected")
                     .map((server) => (
                       <SelectItem
                         key={server.id}
                         value={server.id}
-                        className="text-slate-300 hover:bg-slate-600"
+                        className="text-gray-300 hover:bg-gray-700"
                       >
                         <div className="flex items-center gap-2">
                           <Server className="w-3 h-3" />
@@ -774,7 +774,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                   onClick={() => setSelectedMCPContext("")}
                   variant="ghost"
                   size="sm"
-                  className="h-7 w-7 p-0 text-slate-400 hover:text-white"
+                  className="h-7 w-7 p-0 text-gray-400 hover:text-white"
                   title="Clear MCP selection"
                 >
                   <X className="w-3 h-3" />
@@ -797,12 +797,12 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                         })`
                       : "Type your message... (AI will auto-route to the best MCP server based on your query)"
                   }
-                  className="w-full min-h-[80px] max-h-[120px] p-3 bg-slate-700 border border-slate-600 rounded-md text-slate-100 placeholder-slate-400 focus:border-orange-500 focus:outline-none resize-none text-sm break-words overflow-wrap-anywhere word-break-break-all overflow-hidden"
+                  className="w-full min-h-[80px] max-h-[120px] p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:border-blue-500 focus:outline-none resize-none text-sm break-words overflow-wrap-anywhere word-break-break-all overflow-hidden"
                   disabled={isLoading}
                   rows={3}
                 />
                 {inputMessage.trim() && (
-                  <div className="absolute bottom-2 right-2 text-xs text-slate-500">
+                  <div className="absolute bottom-2 right-2 text-xs text-gray-500">
                     {inputMessage.length} chars
                   </div>
                 )}
@@ -811,7 +811,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                 <Button
                   onClick={handleSendMessage}
                   disabled={isLoading || !inputMessage.trim()}
-                  className="bg-orange-600 hover:bg-orange-700 text-white h-[80px] px-4"
+                  className="bg-blue-800 hover:bg-blue-700 text-white h-[80px] px-4"
                   title="Send message (Enter)"
                 >
                   {isLoading ? (
@@ -829,7 +829,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                 <Button
                   onClick={handleDisconnect}
                   variant="outline"
-                  className="h-8 w-8 p-0 border-slate-600 text-slate-400 hover:text-white hover:bg-slate-700"
+                  className="h-8 w-8 p-0 border-gray-600 text-gray-400 hover:text-white hover:bg-gray-700"
                   title="Disconnect from Eliza"
                 >
                   <AlertCircle className="w-3 h-3" />
@@ -838,7 +838,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
             </div>
 
             {/* Status indicators */}
-            <div className="flex items-center justify-between text-xs text-slate-500">
+            <div className="flex items-center justify-between text-xs text-gray-500">
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1">
                   <div
@@ -862,7 +862,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                   MCP(s) Connected
                 </span>
               </div>
-              <div className="text-slate-600">
+              <div className="text-gray-600">
                 Press Enter to send • Shift+Enter for new line
               </div>
             </div>

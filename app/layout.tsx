@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
+    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable} dark`}>
       <head>
         <title>Solmix - Solidity IDE</title>
         <meta
@@ -28,14 +28,16 @@ export default function RootLayout({
           content="Solmix - A modern Solidity IDE for smart contract development"
         />
       </head>
-      <body className={GeistSans.className}>
-        <WagmiProvider config={config}>
-          <QueryClientProvider client={queryClient}>
-            <RainbowKitProvider>
-              <MCPProvider>{children}</MCPProvider>
-            </RainbowKitProvider>
-          </QueryClientProvider>
-        </WagmiProvider>
+      <body className={`${GeistSans.className} bg-black text-white min-h-screen`}>
+        <div className="min-h-screen bg-black">
+          <WagmiProvider config={config}>
+            <QueryClientProvider client={queryClient}>
+              <RainbowKitProvider>
+                <MCPProvider>{children}</MCPProvider>
+              </RainbowKitProvider>
+            </QueryClientProvider>
+          </WagmiProvider>
+        </div>
       </body>
     </html>
   );

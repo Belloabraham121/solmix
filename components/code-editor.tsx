@@ -51,10 +51,13 @@ export default function CodeEditor({
           setSaveStatus("saved");
           setHasUnsavedChanges(false);
           onContentChange?.(content);
-          
+
           // If this is a test file, update the test runner
           const file = fileSystem.getFile(fileId);
-          if (file && (file.name.endsWith('.test.js') || file.name.endsWith('.test.sol'))) {
+          if (
+            file &&
+            (file.name.endsWith(".test.js") || file.name.endsWith(".test.sol"))
+          ) {
             testRunner.parseTestFile(file.name, content);
           }
         } catch (error: any) {
@@ -82,9 +85,12 @@ export default function CodeEditor({
         setSaveStatus("saved");
         setHasUnsavedChanges(false);
         onContentChange?.(content);
-        
+
         // If this is a test file, update the test runner
-        if (activeFile.name.endsWith('.test.js') || activeFile.name.endsWith('.test.sol')) {
+        if (
+          activeFile.name.endsWith(".test.js") ||
+          activeFile.name.endsWith(".test.sol")
+        ) {
           testRunner.parseTestFile(activeFile.name, content);
         }
       } catch (error: any) {
@@ -892,9 +898,9 @@ main().catch(console.error);`;
   return (
     <div className="h-full flex flex-col bg-slate-900">
       {/* Editor Header */}
-      <div className="h-10 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-4">
+      <div className="h-10 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm text-slate-300">
+          <div className="flex items-center gap-2 text-sm text-gray-300">
             <span>{activeFile.name}</span>
             {hasUnsavedChanges && <span className="text-orange-400">●</span>}
           </div>
@@ -906,7 +912,7 @@ main().catch(console.error);`;
             variant="ghost"
             size="sm"
             onClick={handleManualSave}
-            className="text-slate-400 hover:text-white hover:bg-slate-700"
+            className="text-gray-400 hover:text-white hover:bg-gray-700"
             title="Save (Ctrl+S)"
             disabled={saveStatus === "saving"}
           >
@@ -916,7 +922,7 @@ main().catch(console.error);`;
             variant="ghost"
             size="sm"
             onClick={handleFind}
-            className="text-slate-400 hover:text-white hover:bg-slate-700"
+            className="text-gray-400 hover:text-white hover:bg-gray-700"
             title="Find (Ctrl+F)"
           >
             <Search className="w-4 h-4" />
@@ -925,7 +931,7 @@ main().catch(console.error);`;
             variant="ghost"
             size="sm"
             onClick={copyToClipboard}
-            className="text-slate-400 hover:text-white hover:bg-slate-700"
+            className="text-gray-400 hover:text-white hover:bg-gray-700"
             title="Copy to clipboard"
           >
             <Copy className="w-4 h-4" />
@@ -934,7 +940,7 @@ main().catch(console.error);`;
             variant="ghost"
             size="sm"
             onClick={downloadFile}
-            className="text-slate-400 hover:text-white hover:bg-slate-700"
+            className="text-gray-400 hover:text-white hover:bg-gray-700"
             title="Download file"
           >
             <Download className="w-4 h-4" />
@@ -944,20 +950,20 @@ main().catch(console.error);`;
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-slate-400 hover:text-white hover:bg-slate-700"
+                className="text-gray-400 hover:text-white hover:bg-gray-700"
               >
                 <Settings className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-slate-800 border-slate-700">
+            <DropdownMenuContent className="bg-gray-800 border-gray-700">
               <DropdownMenuItem
                 onClick={formatDocument}
-                className="text-slate-300 hover:bg-slate-700 hover:text-white"
+                className="text-gray-300 hover:bg-gray-700 hover:text-white"
               >
                 Format Document
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-slate-700" />
-              <DropdownMenuItem className="text-slate-300 hover:bg-slate-700 hover:text-white">
+              <DropdownMenuSeparator className="bg-gray-700" />
+              <DropdownMenuItem className="text-gray-300 hover:bg-gray-700 hover:text-white">
                 Editor Settings
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -973,10 +979,10 @@ main().catch(console.error);`;
           theme="vs-dark"
           path={activeFile.id} // Using path for multi-model editing
           loading={
-            <div className="h-full flex items-center justify-center bg-slate-900">
+            <div className="h-full flex items-center justify-center bg-gray-900">
               <div className="text-center">
-                <div className="text-slate-400 text-lg mb-2">
-                  Loading Monaco Editor...
+                <div className="text-gray-400 text-lg mb-2">
+                  Loading SolMix...
                 </div>
                 <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
               </div>
