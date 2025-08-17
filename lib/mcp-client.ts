@@ -232,7 +232,6 @@ export class MCPClient extends EventEmitter {
       compatibilityCheck: true,
     };
 
-
     // Handle process cleanup on exit
     process.on("SIGINT", this.handleProcessExit.bind(this));
     process.on("SIGTERM", this.handleProcessExit.bind(this));
@@ -248,10 +247,8 @@ export class MCPClient extends EventEmitter {
   }
 
   private handleProcessExit(): void {
-
     for (const [serverName, connection] of this.connections) {
       if (connection.process && !connection.process.killed) {
-
         try {
           connection.process.kill("SIGTERM");
         } catch (error) {
@@ -266,7 +263,6 @@ export class MCPClient extends EventEmitter {
       throw new Error("MCP Client already initialized");
     }
 
-
     this.emit("status", {
       type: "initializing",
       message: "Initializing MCP Client...",
@@ -275,23 +271,14 @@ export class MCPClient extends EventEmitter {
     try {
       // Connect to all configured servers sequentially for better debugging
       for (const server of this.config.servers) {
-
         try {
           await this.connectToServer(server);
-
         } catch (error) {
-          console.error(
-            `[MCP Client] Failed to connect to ${server.name}:`,
-            error
-          );
           // Continue with other servers even if one fails
         }
       }
 
       this.isInitialized = true;
-      console.log(
-        `[MCP Client] Initialization completed with ${this.connections.size} connected servers`
-      );
 
       this.emit("status", {
         type: "initialized",
@@ -299,7 +286,6 @@ export class MCPClient extends EventEmitter {
         connectedServers: Array.from(this.connections.keys()),
       });
     } catch (error) {
-      console.error(`[MCP Client] Initialization failed:`, error);
       this.emit("error", { type: "initialization_failed", error });
       throw error;
     }
@@ -361,16 +347,10 @@ export class MCPClient extends EventEmitter {
       });
 
       serverProcess.on("exit", (code: number | null, signal: string | null) => {
-        console.log(
-          `${serverConfig.name} process exited with code ${code}, signal ${signal}`
-        );
         connection.connected = false;
 
         // Only attempt reconnection if the exit was unexpected (not a graceful shutdown)
         if (code !== 0 && signal !== "SIGTERM" && retryCount < maxRetries) {
-          console.log(
-            `Attempting to reconnect ${serverConfig.name} due to unexpected exit...`
-          );
           setTimeout(() => {
             this.connectToServer(serverConfig, retryCount + 1).catch((err) => {
               console.error(`Failed to reconnect ${serverConfig.name}:`, err);
@@ -575,30 +555,9 @@ export class MCPClient extends EventEmitter {
   }
 
   private handleMessage(connection: MCPServerConnection, message: any): void {
-    // Log message with optimized logging to avoid performance issues with large responses
-    this.optimizedLog(
-      "log",
-      `[MCP Client] Received message from ${connection.name}:`,
-      message
-    );
-
-    // Debug: Log message structure
-    console.log(
-      `[MCP Client] DEBUG: Message structure for ${connection.name}:`,
-      {
-        hasResult: !!message.result,
-        hasTools: !!(message.result && message.result.tools),
-        hasId: !!message.id,
-        hasMethod: !!message.method,
-        messageKeys: Object.keys(message),
-        resultKeys: message.result ? Object.keys(message.result) : null,
-      }
-    );
-
     // Handle initialize response from server
     if (message.result && message.id && !message.method) {
       // This is likely a response to our initialize request
-
 
       // Send initialized notification
       const initializedNotification = {
@@ -612,7 +571,6 @@ export class MCPClient extends EventEmitter {
           JSON.stringify(initializedNotification) + "\n"
         );
 
-
         // Request tools list after initialization
         setTimeout(() => {
           const toolsRequest = {
@@ -623,7 +581,6 @@ export class MCPClient extends EventEmitter {
           };
 
           connection.process.stdin?.write(JSON.stringify(toolsRequest) + "\n");
-
         }, 100);
       } catch (error) {
         console.error(
@@ -633,32 +590,12 @@ export class MCPClient extends EventEmitter {
       }
     }
 
-
-
     if (message.result && message.result.tools) {
       // Server responded with tools list
-      console.log(
-        `[MCP Client] DEBUG: About to mark ${connection.name} as connected`
-      );
+
       connection.tools = message.result.tools;
       connection.connected = true;
-      console.log(
-        `[MCP Client] ${connection.name} connected with ${connection.tools.length} tools:`,
-        connection.tools.map((t) => t.name)
-      );
-      console.log(
-        `[MCP Client] Connection marked as connected for ${connection.name}`
-      );
-      console.log(
-        `[MCP Client] Current connections map size: ${this.connections.size}`
-      );
-      console.log(
-        `[MCP Client] All connections:`,
-        Array.from(this.connections.keys())
-      );
-      console.log(
-        `[MCP Client] Emitting serverConnected event for ${connection.name}`
-      );
+
       this.emit("serverConnected", connection.name);
     } else if (message.result) {
       // Debug: Check what's in the result when tools are not found
@@ -827,7 +764,6 @@ export class MCPClient extends EventEmitter {
     // Try to load from cache first
     const cached = await this.loadSchemaFromCache(serverName);
     if (cached) {
-
       return this.filterToolsSelectively(cached.tools);
     }
 
@@ -861,7 +797,6 @@ export class MCPClient extends EventEmitter {
         allTools.push(...serverTools);
       }
 
-
       return allTools;
     } finally {
       this.streamingStats.streamingActive = false;
@@ -875,7 +810,6 @@ export class MCPClient extends EventEmitter {
     // Try to load from cache first
     const cached = await this.loadSchemaFromCache(serverName);
     if (cached) {
-
       const filteredCachedTools = this.filterToolsSelectively(cached.tools);
       return filteredCachedTools.map((tool) => ({ ...tool, serverName }));
     }
@@ -1398,7 +1332,6 @@ export class MCPClient extends EventEmitter {
     return tools.filter((tool) => {
       // Check if tool is blocked
       if (this.selectiveToolOptions.blockedTools?.includes(tool.name)) {
-
         return false;
       }
 
@@ -1611,7 +1544,6 @@ export class MCPClient extends EventEmitter {
       return;
     }
 
-
     this._isDestroyed = true;
 
     // Disconnect all servers
@@ -1634,8 +1566,6 @@ export class MCPClient extends EventEmitter {
 
     // Remove all listeners
     this.removeAllListeners();
-
-
   }
 
   // Schema versioning methods

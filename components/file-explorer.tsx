@@ -297,7 +297,33 @@ export default function FileExplorer({
   useEffect(() => {
     setIsMounted(true);
     loadFiles();
-  }, []);
+
+    // Listen for file system updates from AI orchestrator
+    const handleFileSystemUpdate = (event: CustomEvent) => {
+      console.log('[FILE EXPLORER] Received file system update:', event.detail);
+      loadFiles(); // Refresh the file tree
+      
+      // If a file was created, select it and trigger callback
+      if (event.detail.action === 'create' && event.detail.fileId) {
+        setTimeout(() => {
+          const newFile = fileSystem.getFile(event.detail.fileId);
+          console.log('[FILE EXPLORER] Looking for created file:', event.detail.fileId, 'Found:', newFile);
+          if (newFile && newFile.type === 'file') {
+            setSelectedFile(newFile.id);
+            // Convert FileNode to FileTreeNode
+            const { children, ...fileTreeNode } = newFile;
+            onFileSelect(fileTreeNode);
+          }
+        }, 100); // Small delay to ensure file system is updated
+      }
+    };
+
+    window.addEventListener('fileSystemUpdate', handleFileSystemUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('fileSystemUpdate', handleFileSystemUpdate as EventListener);
+    };
+  }, [onFileSelect]);
 
   const loadFiles = () => {
     const tree = fileSystem.getFileTree();

@@ -19,14 +19,18 @@ export interface FileSystemState {
   rootFiles: string[];
 }
 
+import { fileStorage, migrateFromLocalStorage } from './indexeddb-storage';
+
 const STORAGE_KEY = "solmix-files";
 
 export class FileSystem {
   private static instance: FileSystem;
   private state: FileSystemState;
+  private initPromise: Promise<void> | null = null;
 
   private constructor() {
-    this.state = this.loadFromStorage();
+    this.state = { files: {}, rootFiles: [] };
+    this.initPromise = this.initializeStorage();
   }
 
   static getInstance(): FileSystem {
@@ -36,24 +40,40 @@ export class FileSystem {
     return FileSystem.instance;
   }
 
-  private loadFromStorage(): FileSystemState {
+  private async initializeStorage(): Promise<void> {
     if (typeof window === "undefined") {
-      return { files: {}, rootFiles: [] };
+      return;
     }
 
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      // Initialize IndexedDB
+      await fileStorage.init();
+      
+      // Try to migrate from localStorage first
+      await migrateFromLocalStorage();
+      
+      // Load existing data or create default files
+      const stored = await fileStorage.getItem(STORAGE_KEY);
+      
       if (stored) {
-        return JSON.parse(stored);
+        this.state = stored;
+      } else {
+        // Initialize with default files
+        const defaultState = this.createDefaultFiles();
+        await this.saveToStorage(defaultState);
+        this.state = defaultState;
       }
     } catch (error) {
-      console.error("Failed to load files from localStorage:", error);
+      console.error("Failed to initialize IndexedDB storage:", error);
+      // Fallback to creating default files in memory
+      this.state = this.createDefaultFiles();
     }
+  }
 
-    // Initialize with default files
-    const defaultState = this.createDefaultFiles();
-    this.saveToStorage(defaultState);
-    return defaultState;
+  private async ensureInitialized(): Promise<void> {
+    if (this.initPromise) {
+      await this.initPromise;
+    }
   }
 
   private createDefaultFiles(): FileSystemState {
@@ -342,14 +362,15 @@ describe("HelloWorld", function () {
     };
   }
 
-  private saveToStorage(state?: FileSystemState): void {
+  private async saveToStorage(state?: FileSystemState): Promise<void> {
     if (typeof window === "undefined") return;
 
     try {
+      await this.ensureInitialized();
       const stateToSave = state || this.state;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+      await fileStorage.setItem(STORAGE_KEY, stateToSave);
     } catch (error) {
-      console.error("Failed to save files to localStorage:", error);
+      console.error("Failed to save files to IndexedDB:", error);
     }
   }
 
@@ -382,6 +403,25 @@ describe("HelloWorld", function () {
 
     this.saveToStorage();
     return file;
+  }
+
+  // Async version for MCP interface
+  async createFileAsync(name: string, parentId?: string, extension = "sol"): Promise<FileNode> {
+    await this.ensureInitialized();
+    return this.createFile(name, parentId, extension);
+  }
+
+  // Async version for updating file content
+  async updateFileAsync(id: string, content: string): Promise<void> {
+    await this.ensureInitialized();
+    this.updateFile(id, content);
+  }
+
+  // Expose ensureInitialized for external use
+  async ensureInitialized(): Promise<void> {
+    if (this.initPromise) {
+      await this.initPromise;
+    }
   }
 
   createFolder(name: string, parentId?: string): FileNode {

@@ -17,6 +17,12 @@
           "env": {
             "PRIVATE_KEY": "${PRIVATE_KEY}"
           }
+        },
+        "filesystem-server": {
+          "type": "stdio",
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-filesystem"],
+          "env": {}
         }
       }
     }

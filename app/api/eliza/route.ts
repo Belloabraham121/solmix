@@ -152,6 +152,239 @@ async function processWithElizaRuntime(
   }
 }
 
+// AI-powered workflow orchestrator that can handle any multi-step MCP workflow
+async function analyzeAndExecuteWorkflow(
+  message: string,
+  mcpClient: any
+): Promise<{ response: string; usedMCP: boolean; isWorkflow: boolean }> {
+  console.log(`[AI Workflow] Analyzing message for workflow potential: "${message}"`);
+  
+  try {
+    // Get available MCP tools
+    const allTools = await mcpClient.getAllTools();
+    const connectedServers = mcpClient.getConnectedServers();
+    
+    // Use Google GenAI to analyze if this is a multi-step workflow
+    const apiKey = process.env.GOOGLE_GENAI_API_KEY || "AIzaSyBUC7fcpxGlnxJ6qlt0LerVkxpaZrURE0k";
+    const { GoogleGenerativeAI } = await import("@google/generative-ai");
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const workflowAnalysisPrompt = `Analyze this user request and determine if it requires multiple MCP tool calls in sequence:
+
+User Request: "${message}"
+
+Available MCP Servers and Tools:
+${connectedServers.map((server: any) => `\n${server.name}:`).join('')}
+${allTools.map((tool: any) => `- ${tool.name} (${tool.serverName}): ${tool.description || 'No description'}`).join('\n')}
+
+Analyze if this request requires multiple steps and respond with a JSON object:
+
+{
+  "isMultiStep": boolean,
+  "steps": [
+    {
+      "stepNumber": 1,
+      "action": "description of what to do",
+      "serverName": "browser-filesystem-server",
+      "toolName": "create_file",
+      "arguments": {
+        "path": "filename.extension",
+        "content": "file content here"
+      },
+      "dependsOn": null or previous step number,
+      "extractData": "what data to extract for next step"
+    }
+  ],
+  "reasoning": "explanation of why this workflow is needed"
+}
+
+If this is NOT a multi-step workflow, return: {"isMultiStep": false}
+
+IMPORTANT FILE CREATION RULES:
+- For ANY file creation request (React component, smart contract, configuration file, etc.), use "browser-filesystem-server" and "create_file"
+- Detect file extensions from context: .sol for Solidity, .js/.jsx for JavaScript/React, .ts/.tsx for TypeScript, .md for markdown, .json for JSON, .py for Python, etc.
+- The "path" should be just the filename with proper extension
+- The "content" should be the complete file content based on the user's request
+
+Focus on identifying:
+- File creation/writing operations (CREATE FILES FOR: React components, smart contracts, config files, documentation, etc.)
+- Blockchain operations (balance checks, transactions)
+- Memory operations (remembering, storing data)
+- Any dependencies between operations
+
+EXAMPLES:
+- "Create a React component" → browser-filesystem-server + create_file with .jsx extension
+- "Write a smart contract" → browser-filesystem-server + create_file with .sol extension  
+- "Make a config file" → browser-filesystem-server + create_file with .json extension
+- "Create documentation" → browser-filesystem-server + create_file with .md extension`;
+
+    const workflowAnalysis = await model.generateContent(workflowAnalysisPrompt);
+    const analysisText = workflowAnalysis.response.text();
+    
+    console.log(`[AI Workflow] AI Analysis:`, analysisText);
+    
+    // Parse the AI's workflow analysis
+    let workflowPlan;
+    try {
+      const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        workflowPlan = JSON.parse(jsonMatch[0]);
+      } else {
+        workflowPlan = { isMultiStep: false };
+      }
+    } catch (e) {
+      console.log(`[AI Workflow] Failed to parse AI response, treating as single-step`);
+      return { response: "", usedMCP: false, isWorkflow: false };
+    }
+    
+    if (!workflowPlan.isMultiStep) {
+      console.log(`[AI Workflow] AI determined this is not a multi-step workflow`);
+      return { response: "", usedMCP: false, isWorkflow: false };
+    }
+    
+    console.log(`[AI Workflow] Executing multi-step workflow:`, workflowPlan.reasoning);
+    
+    // Execute the workflow steps
+    const stepResults = {};
+    let finalResponse = `🤖 **AI Workflow Orchestrator**\n\n**Analysis**: ${workflowPlan.reasoning}\n\n**Execution Log**:\n\n`;
+    
+    for (const step of workflowPlan.steps || []) {
+      console.log(`[AI Workflow] Executing Step ${step.stepNumber}: ${step.action}`);
+      
+      try {
+        // Resolve dependencies - replace placeholders with actual data from previous steps
+        let resolvedArguments = step.arguments;
+        console.log(`[AI Workflow] Step ${step.stepNumber} original arguments:`, JSON.stringify(step.arguments, null, 2));
+        
+        if (step.dependsOn && stepResults[step.dependsOn as keyof typeof stepResults]) {
+          console.log(`[AI Workflow] Step ${step.stepNumber} depends on step ${step.dependsOn}`);
+          console.log(`[AI Workflow] Previous step result:`, JSON.stringify(stepResults[step.dependsOn as keyof typeof stepResults], null, 2));
+          
+          resolvedArguments = await resolveDependencies(step.arguments, stepResults[step.dependsOn as keyof typeof stepResults], model);
+          console.log(`[AI Workflow] Step ${step.stepNumber} resolved arguments:`, JSON.stringify(resolvedArguments, null, 2));
+        }
+        
+        // Execute the MCP tool call
+        let toolResult;
+        
+        // Special handling for file operations - redirect to browser file system
+        if ((step.serverName === 'filesystem-server' || step.serverName === 'browser-filesystem-server') && 
+            (step.toolName === 'write_file' || step.toolName === 'create_file')) {
+          console.log(`[AI Workflow] Redirecting file operation to browser file system`);
+          
+          // Create the file operation message for the frontend
+          const fileData = {
+            action: 'create_browser_file',
+            name: resolvedArguments.path ? extractFileNameFromPath(resolvedArguments.path) : 'generated_file.json',
+            content: resolvedArguments.content || '',
+            extension: resolvedArguments.path ? extractExtensionFromPath(resolvedArguments.path) : 'json',
+            parentId: resolvedArguments.parentId
+          };
+          
+          toolResult = {
+            content: [{
+              type: 'text',
+              text: JSON.stringify(fileData)
+            }],
+            isError: false,
+            fileCreation: fileData // Add special marker for file creation
+          };
+          
+          console.log(`[AI Workflow] Browser file operation prepared:`, fileData);
+        } else {
+          // Normal MCP tool call
+          toolResult = await mcpClient.callTool({
+            toolName: step.toolName,
+            serverName: step.serverName,
+            arguments: resolvedArguments,
+          });
+        }
+        
+        // Store result for potential use in next steps
+        (stepResults as any)[step.stepNumber] = {
+          result: toolResult,
+          extractedData: step.extractData ? await extractDataFromResult(toolResult, step.extractData, model) : null
+        };
+        
+        finalResponse += `**Step ${step.stepNumber}**: ✅ ${step.action}\n`;
+        
+        // Add relevant details from the result
+        if (toolResult?.content?.[0]?.text) {
+          const resultText = toolResult.content[0].text;
+          if (step.serverName === 'sei-mcp-server' && step.toolName === 'get_balance') {
+            try {
+              const balanceData = JSON.parse(resultText);
+              const balance = balanceData.ether || balanceData.balance || balanceData.wei || '0';
+              finalResponse += `   - Balance: ${balance} SEI\n`;
+            } catch (e) {
+              finalResponse += `   - Result: ${resultText.substring(0, 100)}...\n`;
+            }
+          } else if (step.serverName === 'filesystem-server') {
+            if (step.toolName === 'write_file') {
+              finalResponse += `   - File written successfully\n`;
+            } else {
+              finalResponse += `   - File operation completed\n`;
+            }
+          } else {
+            finalResponse += `   - Completed successfully\n`;
+          }
+        } else {
+          finalResponse += `   - Tool executed (no text response)\n`;
+        }
+        
+        // Log the full tool result for debugging
+        console.log(`[AI Workflow] Step ${step.stepNumber} full result:`, JSON.stringify(toolResult, null, 2));
+        
+      } catch (stepError) {
+        console.error(`[AI Workflow] Step ${step.stepNumber} failed:`, stepError);
+        finalResponse += `**Step ${step.stepNumber}**: ❌ Failed - ${stepError instanceof Error ? stepError.message : String(stepError)}\n`;
+      }
+    }
+    
+    finalResponse += `\n🎯 **Workflow completed** - ${workflowPlan.steps?.length || 0} steps executed across multiple MCP servers.`;
+    
+    return {
+      response: finalResponse,
+      usedMCP: true,
+      isWorkflow: true
+    };
+    
+  } catch (error) {
+    console.error(`[AI Workflow] Workflow analysis failed:`, error);
+    return { response: "", usedMCP: false, isWorkflow: false };
+  }
+}
+
+// Helper function to resolve dependencies between workflow steps
+async function resolveDependencies(toolArgs: any, previousStepResult: any, model: any): Promise<any> {
+  // Use AI to intelligently resolve placeholders in arguments based on previous step results
+  const resolvePrompt = `Given these arguments with potential placeholders: ${JSON.stringify(toolArgs)}\n\nAnd this previous step result: ${JSON.stringify(previousStepResult)}\n\nResolve any placeholders and return the final arguments as JSON. If no placeholders exist, return the original arguments.`;
+  
+  try {
+    const resolution = await model.generateContent(resolvePrompt);
+    const resolvedText = resolution.response.text();
+    const jsonMatch = resolvedText.match(/\{[\s\S]*\}/);
+    return jsonMatch ? JSON.parse(jsonMatch[0]) : toolArgs;
+  } catch (e) {
+    return toolArgs;
+  }
+}
+
+// Helper function to extract specific data from tool results
+async function extractDataFromResult(toolResult: any, extractInstruction: string, model: any): Promise<any> {
+  const extractPrompt = `Extract the following from this tool result: "${extractInstruction}"\n\nTool Result: ${JSON.stringify(toolResult)}\n\nReturn the extracted data as a JSON object.`;
+  
+  try {
+    const extraction = await model.generateContent(extractPrompt);
+    const extractedText = extraction.response.text();
+    const jsonMatch = extractedText.match(/\{[\s\S]*\}/);
+    return jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // Use MCP tools for SEI queries instead of the separate plugin
 async function processMessageWithMCPTools(
   message: string,
@@ -489,6 +722,20 @@ async function shouldCallMCPTool(
   return { shouldCall: false };
 }
 
+// Helper functions for file path extraction
+function extractFileNameFromPath(path: string): string {
+  if (!path) return "untitled";
+  const parts = path.split('/');
+  return parts[parts.length - 1] || "untitled";
+}
+
+function extractExtensionFromPath(path: string): string {
+  if (!path) return "json";
+  const fileName = extractFileNameFromPath(path);
+  const parts = fileName.split('.');
+  return parts.length > 1 ? parts[parts.length - 1] : "json";
+}
+
 export async function POST(request: NextRequest) {
   console.log("\n🚀🚀🚀 [ELIZA-POST] POST function called! 🚀🚀🚀");
   try {
@@ -634,15 +881,27 @@ export async function POST(request: NextRequest) {
           try {
             console.log("Eliza runtime available:", !!elizaRuntime);
 
-            // First, try MCP tools for blockchain queries
-            console.log("Trying MCP tools first...");
-            const mcpResult = await processMessageWithMCPTools(
+            // First, check if this is a complex multi-step workflow
+            console.log("Checking for AI workflow potential...");
+            const workflowResult = await analyzeAndExecuteWorkflow(
               message,
               mcpClient
             );
-            console.log("MCP tools result:", mcpResult);
+            console.log("AI workflow result:", workflowResult);
 
-            if (mcpResult.usedMCP) {
+            if (workflowResult.isWorkflow) {
+              console.log("AI workflow orchestrator handled the message");
+              response = workflowResult.response;
+            } else {
+              // Second, try MCP tools for blockchain queries
+              console.log("Trying MCP tools for single-step operations...");
+              const mcpResult = await processMessageWithMCPTools(
+                message,
+                mcpClient
+              );
+              console.log("MCP tools result:", mcpResult);
+
+              if (mcpResult.usedMCP) {
               console.log(
                 "MCP tools handled the message, now processing through AI..."
               );
@@ -787,6 +1046,7 @@ Please respond naturally to the user's question using this data. Be helpful, con
                   mcpContext
                 );
               }
+            }
             }
           } catch (elizaError) {
             console.error("Eliza runtime error:", elizaError);
