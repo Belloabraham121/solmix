@@ -3,31 +3,27 @@ import MCPClientSingleton from "@/lib/mcp-singleton";
 
 export async function GET() {
   try {
-    console.log("API: Getting MCP status from real client");
+
 
     // Initialize MCP client if needed
-    console.log("API: Ensuring MCP client is initialized...");
+
     const client = await MCPClientSingleton.getInstance();
 
     // Wait a moment for connections to establish
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const status = client.getStatus();
-    console.log("API: MCP client initialized, status:", {
-      initialized: status.initialized,
-      connectedServers: status.connectedServers,
-      totalServers: status.servers?.length || 0,
-    });
 
-    console.log("API: MCP client status:", status);
+
+
 
     // Get all available tools
     const allTools = await client.getAllTools();
-    console.log("API: Available tools:", allTools.length);
+
 
     // Get connected servers info
     const connectedServers = client.getConnectedServers();
-    console.log("API: Connected servers:", connectedServers);
+
 
     // Transform server data for the dashboard
     const servers = status.servers.map((server) => ({
@@ -64,7 +60,7 @@ export async function GET() {
       source: server.name,
     }));
 
-    console.log("API: Returning real MCP data");
+
 
     return NextResponse.json({
       success: true,
@@ -84,7 +80,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Error getting MCP status:", error);
+
     return NextResponse.json(
       {
         success: false,
@@ -154,7 +150,7 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    console.error("Error handling MCP action:", error);
+
     return NextResponse.json(
       {
         success: false,

@@ -95,12 +95,6 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
 
       // Check if response is actually JSON
       const contentType = response.headers.get("content-type");
-      console.log("MCP Status API Response:", {
-        status: response.status,
-        statusText: response.statusText,
-        contentType,
-        url: response.url,
-      });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -108,7 +102,6 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
 
       if (!contentType || !contentType.includes("application/json")) {
         const text = await response.text();
-        console.error("Expected JSON but got:", text.substring(0, 200));
         throw new Error("API returned non-JSON response");
       }
 
@@ -126,7 +119,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
         setMcpServers(servers);
       }
     } catch (error) {
-      console.error("Failed to fetch MCP servers:", error);
+      // Error handled silently
     } finally {
       setIsInitializing(false);
     }
@@ -214,7 +207,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
         setMessages((prev) => [...prev, disconnectMessage]);
       }
     } catch (error) {
-      console.error("Failed to disconnect server:", error);
+      // Error handled silently
     }
   };
 
@@ -264,7 +257,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
         body: JSON.stringify({ action: "disconnect" }),
       });
     } catch (error) {
-      console.error("Error disconnecting:", error);
+      // Error handled silently
     }
 
     setIsElizaConnected(false);
@@ -461,7 +454,6 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
         throw new Error(result.error || "Failed to get response");
       }
     } catch (error) {
-      console.error("Error sending message to Eliza:", error);
       const errorMessage: MCPMessage = {
         id: (Date.now() + 1).toString(),
         type: "system",
@@ -507,7 +499,6 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
         setAvailableTools(tools);
       }
     } catch (error) {
-      console.error("Failed to fetch available tools:", error);
       setAvailableTools([]);
     }
   };
@@ -603,12 +594,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                             size="sm"
                             className="w-full mt-3 h-7 text-xs bg-orange-600 hover:bg-orange-700"
                             onClick={() => {
-                              console.log(
-                                "Using tool:",
-                                tool.name,
-                                "from server:",
-                                tool.serverName
-                              );
+                              // Tool usage would be implemented here
                             }}
                           >
                             <Zap className="w-3 h-3 mr-1" />

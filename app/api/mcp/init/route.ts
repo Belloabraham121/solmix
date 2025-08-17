@@ -8,15 +8,15 @@ import MCPClientSingleton from "@/lib/mcp-singleton";
  */
 export async function POST() {
   try {
-    console.log("API: Initializing MCP client...");
+
 
     // Get instance info for debugging
     const instanceInfo = MCPClientSingleton.getInstanceInfo();
-    console.log("API: Current instance info:", instanceInfo);
+
 
     // Get or create the singleton instance
     const client = await MCPClientSingleton.getInstance();
-    console.log("API: MCP client initialized successfully");
+
 
     const status = client.getStatus();
 
@@ -30,7 +30,7 @@ export async function POST() {
       },
     });
   } catch (error) {
-    console.error("API: Failed to initialize MCP client:", error);
+
 
     return NextResponse.json(
       {
@@ -48,7 +48,7 @@ export async function POST() {
  */
 export async function DELETE() {
   try {
-    console.log("API: Resetting MCP client...");
+
 
     await MCPClientSingleton.reset();
 
@@ -57,7 +57,7 @@ export async function DELETE() {
       message: "MCP client reset successfully",
     });
   } catch (error) {
-    console.error("API: Failed to reset MCP client:", error);
+
 
     return NextResponse.json(
       {

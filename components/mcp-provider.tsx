@@ -56,7 +56,7 @@ export function MCPProvider({ children }: MCPProviderProps) {
       setError(null);
 
       try {
-        console.log("Checking MCP client status...");
+
 
         // First, check if MCP is already initialized
         const initialStatusResponse = await fetch("/api/mcp/status");
@@ -66,9 +66,7 @@ export function MCPProvider({ children }: MCPProviderProps) {
           initialStatusResult.success &&
           initialStatusResult.data.status.initialized
         ) {
-          console.log(
-            "MCP client already initialized, using existing instance"
-          );
+
           setServerStatus({
             connectedServers: initialStatusResult.data.status.connectedServers,
             totalServers: initialStatusResult.data.status.totalServers,
@@ -78,7 +76,7 @@ export function MCPProvider({ children }: MCPProviderProps) {
           return;
         }
 
-        console.log("Initializing MCP client via API...");
+
 
         // Only initialize if not already initialized
         const initResponse = await fetch("/api/mcp/init", {
@@ -89,7 +87,7 @@ export function MCPProvider({ children }: MCPProviderProps) {
         });
 
         const initResult = await initResponse.json();
-        console.log("MCP init result:", initResult);
+
 
         if (!initResult.success) {
           throw new Error(
@@ -105,12 +103,7 @@ export function MCPProvider({ children }: MCPProviderProps) {
         
         // Check if response is actually JSON
         const contentType = statusResponse.headers.get('content-type');
-        console.log('MCP Status API Response (init):', {
-          status: statusResponse.status,
-          statusText: statusResponse.statusText,
-          contentType,
-          url: statusResponse.url
-        });
+
         
         if (!statusResponse.ok) {
           throw new Error(`HTTP ${statusResponse.status}: ${statusResponse.statusText}`);
@@ -118,7 +111,7 @@ export function MCPProvider({ children }: MCPProviderProps) {
         
         if (!contentType || !contentType.includes('application/json')) {
           const text = await statusResponse.text();
-          console.error('Expected JSON but got:', text.substring(0, 200));
+
           throw new Error('API returned non-JSON response');
         }
         
@@ -131,16 +124,14 @@ export function MCPProvider({ children }: MCPProviderProps) {
             servers: statusResult.data.servers,
           });
           setIsInitialized(true);
-          console.log(
-            "MCP client initialized and status retrieved successfully"
-          );
+
         } else {
           throw new Error("Failed to get MCP status after initialization");
         }
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Unknown error";
-        console.error("Failed to initialize MCP client:", errorMessage);
+
         setError(errorMessage);
       } finally {
         setIsInitializing(false);
@@ -158,13 +149,13 @@ export function MCPProvider({ children }: MCPProviderProps) {
         const contentType = response.headers.get('content-type');
         
         if (!response.ok) {
-          console.error(`Polling failed: HTTP ${response.status}: ${response.statusText}`);
+
           return;
         }
         
         if (!contentType || !contentType.includes('application/json')) {
           const text = await response.text();
-          console.error('Polling expected JSON but got:', text.substring(0, 200));
+
           return;
         }
         
@@ -178,7 +169,7 @@ export function MCPProvider({ children }: MCPProviderProps) {
           });
         }
       } catch (err) {
-        console.error("Failed to poll MCP status:", err);
+
       }
     }, 5000); // Poll every 5 seconds
 

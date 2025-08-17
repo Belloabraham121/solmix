@@ -6,14 +6,14 @@ import MCPClientSingleton from "@/lib/mcp-singleton";
  */
 export async function GET() {
   try {
-    console.log("=== MCP DEBUG START ===");
+
 
     const client = await MCPClientSingleton.getInstance();
-    console.log("Debug: Got client instance:", client.instanceId);
+
 
     // Access private connections map via reflection
     const connections = (client as any).connections;
-    console.log("Debug: Connections map size:", connections.size);
+
 
     const connectionDetails = [];
     for (const [name, connection] of connections.entries()) {
@@ -27,19 +27,19 @@ export async function GET() {
         tools: connection.tools?.map((t: any) => t.name) || [],
       };
       connectionDetails.push(details);
-      console.log(`Debug: Connection ${name}:`, details);
+
     }
 
     const status = client.getStatus();
-    console.log("Debug: Client status:", status);
+
 
     const connectedServers = client.getConnectedServers();
-    console.log("Debug: Connected servers:", connectedServers);
+
 
     const allTools = await client.getAllTools();
-    console.log("Debug: All tools count:", allTools.length);
 
-    console.log("=== MCP DEBUG END ===");
+
+
 
     return NextResponse.json({
       success: true,
@@ -57,7 +57,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("=== MCP DEBUG ERROR ===", error);
+
 
     return NextResponse.json(
       {
