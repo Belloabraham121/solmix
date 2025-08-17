@@ -843,7 +843,7 @@ export default function CompilerInterface({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="h-8 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-3">
+      <div className="h-8 bg-black border-dashed border-b border-slate-700 flex items-center justify-between px-3">
         <span className="text-sm font-medium text-slate-300">
           Solidity Compiler
         </span>

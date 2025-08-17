@@ -349,19 +349,19 @@ export default function ConsolePanel({
   return (
     <div className="bg-slate-850 border-t border-slate-700 flex flex-col h-full">
       {/* Header */}
-      <div className="h-8 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-3 flex-shrink-0">
+      <div className="h-8 bg-black border-b border-slate-700 flex items-center justify-between px-3 flex-shrink-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
           <TabsList className="h-6 bg-transparent p-0 space-x-1">
             <TabsTrigger
               value="terminal"
-              className="h-6 px-2 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-slate-300"
+              className="h-6 px-2 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-slate-300 border border-gray-500"
             >
               <Terminal className="w-3 h-3 mr-1" />
               Terminal
             </TabsTrigger>
             <TabsTrigger
               value="logs"
-              className="h-6 px-2 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-slate-300"
+              className="h-6 px-2 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-slate-300 border border-gray-500"
             >
               <FileText className="w-3 h-3 mr-1" />
               Logs
@@ -373,7 +373,7 @@ export default function ConsolePanel({
             </TabsTrigger>
             <TabsTrigger
               value="debugger"
-              className="h-6 px-2 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-slate-300"
+              className="h-6 px-2 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-slate-300 border border-gray-500"
             >
               <Bug className="w-3 h-3 mr-1" />
               Debugger
@@ -392,7 +392,7 @@ export default function ConsolePanel({
             </TabsTrigger>
             <TabsTrigger
               value="tests"
-              className="h-6 px-2 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-slate-300"
+              className="h-6 px-2 text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-slate-300 border border-gray-500"
             >
               <TestTube className="w-3 h-3 mr-1" />
               Test Results

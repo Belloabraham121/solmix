@@ -898,7 +898,7 @@ main().catch(console.error);`;
   return (
     <div className="h-full flex flex-col bg-slate-900">
       {/* Editor Header */}
-      <div className="h-10 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4">
+      <div className="h-10 bg-black border-dashed border-b border-gray-700 flex items-center justify-between px-4">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm text-gray-300">
             <span>{activeFile.name}</span>
@@ -984,7 +984,7 @@ main().catch(console.error);`;
                 <div className="text-gray-400 text-lg mb-2">
                   Loading SolMix...
                 </div>
-                <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <div className="w-8 h-8 border-2 border-y-gray-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
               </div>
             </div>
           }

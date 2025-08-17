@@ -407,7 +407,7 @@ export default function FileExplorer({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="h-8 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-3">
+      <div className="h-8 bg-black border-dashed border-b border-slate-700 flex items-center justify-between px-3">
         <div className="flex items-center gap-2">
           <Folder className="w-4 h-4 text-slate-400" />
           <span className="text-sm font-medium text-slate-300">Explorer</span>
@@ -433,7 +433,7 @@ export default function FileExplorer({
                 <Plus className="w-3 h-3" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-slate-800 border-slate-700">
+            <DropdownMenuContent className="bg-black border-dashed border-slate-700">
               <DropdownMenuItem
                 onClick={() => handleCreateFile()}
                 className="text-slate-300 hover:bg-slate-700 hover:text-white"
@@ -453,7 +453,7 @@ export default function FileExplorer({
         </div>
       </div>
 
-      <div className="p-2 border-b border-slate-700">
+      <div className="p-2 bg-black border-b border-dashed border-slate-700">
         <SearchInput
           placeholder="Search files..."
           value={searchQuery}
@@ -497,14 +497,14 @@ export default function FileExplorer({
       </div>
 
       {/* Footer Stats */}
-      <div className="h-6 bg-slate-800 border-t border-slate-700 flex items-center justify-between px-3 text-xs text-slate-400">
+      <div className="h-6 bg-black border-t border-slate-700 flex items-center justify-between px-3 text-xs text-slate-400">
         <span>{isMounted ? fileCount : 0} files</span>
         <span>{isMounted ? folderCount : 0} folders</span>
       </div>
 
       {/* New File Dialog */}
       <Dialog open={showNewFileDialog} onOpenChange={setShowNewFileDialog}>
-        <DialogContent className="bg-slate-800 border-slate-700">
+        <DialogContent className="bg-black border-dashed border-slate-700">
           <DialogHeader>
             <DialogTitle className="text-slate-100">
               Create New File
@@ -578,7 +578,7 @@ export default function FileExplorer({
 
       {/* New Folder Dialog */}
       <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
-        <DialogContent className="bg-slate-800 border-slate-700">
+        <DialogContent className="bg-black border-slate-700">
           <DialogHeader>
             <DialogTitle className="text-slate-100">
               Create New Folder

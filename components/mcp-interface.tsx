@@ -511,7 +511,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {/* Header */}
-      <div className="bg-slate-900 border-b border-gray-700 p-3 space-y-3">
+      <div className="border-b border-gray-700 p-3 space-y-3">
         {/* Title and Eliza Status */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

@@ -152,10 +152,7 @@ export default function Solmix() {
 
   return (
     <div className="h-screen flex flex-col bg-black text-white">
-      <IDEHeader
-        isDarkMode={isDarkMode}
-        onThemeToggle={() => {}}
-      />
+      <IDEHeader isDarkMode={isDarkMode} onThemeToggle={() => {}} />
 
       <div className="flex items-center justify-between">
         <IDEToolbar
@@ -177,7 +174,7 @@ export default function Solmix() {
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar - File Explorer */}
         {isFileExplorerVisible && (
-          <aside className="w-64 bg-gray-900 border-r border-gray-700 flex flex-col">
+          <aside className="w-64 bg-black border-r border-gray-700 flex flex-col">
             <FileExplorer
               onFileSelect={handleFileSelect}
               onClose={() => setIsFileExplorerVisible(false)}
@@ -202,7 +199,7 @@ export default function Solmix() {
 
         {/* Right Sidebar - Compiler & MCP */}
         <aside
-          className="bg-gray-900 border-l border-gray-700 flex flex-col relative h-full"
+          className=" border-l border-gray-700 flex flex-col relative h-full"
           style={{ width: `${compilerWidth}px` }}
         >
           <div
@@ -224,16 +221,16 @@ export default function Solmix() {
               onValueChange={setActiveRightTab}
               className="flex flex-col h-full"
             >
-              <TabsList className="grid w-full grid-cols-2 bg-gray-800 border-b border-gray-700 rounded-none h-10">
+              <TabsList className="grid w-full grid-cols-2 bg-black border-dashed border-b border-gray-700 rounded-none h-10">
                 <TabsTrigger
                   value="compiler"
-                  className="text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-blue-400"
+                  className="text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-blue-400 data-[state=active]:border-dashed data-[state=active]:border data-[state=active]:border-gray-500"
                 >
                   Compiler
                 </TabsTrigger>
                 <TabsTrigger
                   value="mcp"
-                  className="text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-blue-400"
+                  className="text-xs data-[state=active]:bg-gray-700 data-[state=active]:text-blue-400 data-[state=active]:border-dashed data-[state=active]:border data-[state=active]:border-gray-500"
                 >
                   MCP + Eliza
                 </TabsTrigger>

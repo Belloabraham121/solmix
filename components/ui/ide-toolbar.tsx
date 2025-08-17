@@ -17,7 +17,7 @@ export default function IDEToolbar({
   isFileExplorerVisible,
 }: IDEToolbarProps) {
   return (
-    <div className="h-10 border-b border-slate-700 flex items-center justify-between px-4">
+    <div className="h-10 border-dashed border-b border-slate-700 flex items-center justify-between px-4">
       <div className="flex items-center gap-2">
         {onToggleFileExplorer && (
           <>

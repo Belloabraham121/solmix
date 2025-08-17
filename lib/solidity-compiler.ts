@@ -321,51 +321,42 @@ export class SolidityCompiler {
       {
         name: "Homestead",
         value: "homestead",
-        description: "Homestead hard fork",
       },
       {
         name: "Tangerine Whistle",
         value: "tangerineWhistle",
-        description: "Tangerine Whistle hard fork",
       },
       {
         name: "Spurious Dragon",
         value: "spuriousDragon",
-        description: "Spurious Dragon hard fork",
       },
       {
         name: "Byzantium",
         value: "byzantium",
-        description: "Byzantium hard fork",
       },
       {
         name: "Constantinople",
         value: "constantinople",
-        description: "Constantinople hard fork",
       },
       {
         name: "Petersburg",
         value: "petersburg",
-        description: "Petersburg hard fork",
       },
       {
         name: "Istanbul",
         value: "istanbul",
-        description: "Istanbul hard fork",
       },
-      { name: "Berlin", value: "berlin", description: "Berlin hard fork" },
-      { name: "London", value: "london", description: "London hard fork" },
+      { name: "Berlin", value: "berlin" },
+      { name: "London", value: "london" },
       {
         name: "Paris",
         value: "paris",
-        description: "Paris hard fork (The Merge)",
       },
       {
         name: "Shanghai",
         value: "shanghai",
-        description: "Shanghai hard fork",
       },
-      { name: "Cancun", value: "cancun", description: "Cancun hard fork" },
+      { name: "Cancun", value: "cancun" },
     ];
   }
 

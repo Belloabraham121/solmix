@@ -19,7 +19,7 @@ export default function FileTabs({
   onTabClose,
 }: FileTabsProps) {
   return (
-    <div className="h-10 bg-slate-800 border-b border-slate-700 flex items-center px-2 overflow-x-auto">
+    <div className="h-10 bg-black border-dashed border-b border-slate-700 flex items-center px-2 overflow-x-auto">
       <div className="flex items-center gap-1">
         {tabs.map((tab) => (
           <div
@@ -27,7 +27,7 @@ export default function FileTabs({
             className={cn(
               "flex items-center gap-2 px-3 py-1 rounded-t cursor-pointer group",
               activeTab?.id === tab.id
-                ? "bg-slate-700 border-b-2 border-orange-500"
+                ? "bg-gray-700 border-b-2 border-gray-500"
                 : "hover:bg-slate-700"
             )}
             onClick={() => onTabClick(tab)}
