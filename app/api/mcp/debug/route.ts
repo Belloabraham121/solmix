@@ -36,7 +36,7 @@ export async function GET() {
     const connectedServers = client.getConnectedServers();
     console.log("Debug: Connected servers:", connectedServers);
 
-    const allTools = client.getAllTools();
+    const allTools = await client.getAllTools();
     console.log("Debug: All tools count:", allTools.length);
 
     console.log("=== MCP DEBUG END ===");
@@ -50,7 +50,7 @@ export async function GET() {
         status,
         connectedServers,
         allToolsCount: allTools.length,
-        allTools: allTools.map((t) => ({
+        allTools: allTools.map((t: any) => ({
           name: t.name,
           serverName: t.serverName,
         })),

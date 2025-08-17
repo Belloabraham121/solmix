@@ -385,8 +385,8 @@ export class MCPToolOrchestrator extends EventEmitter {
     return Array.from(this.workflows.values());
   }
 
-  public getAvailableTools(): Array<MCPTool & { serverName: string }> {
-    return this.connectionManager.getAvailableTools();
+  public async getAvailableTools(): Promise<Array<MCPTool & { serverName: string }>> {
+    return await this.connectionManager.getAvailableTools();
   }
 
   public async validateWorkflowTools(workflowId: string): Promise<{
@@ -399,7 +399,7 @@ export class MCPToolOrchestrator extends EventEmitter {
       throw new Error(`Workflow ${workflowId} not found`);
     }
 
-    const availableTools = this.getAvailableTools();
+    const availableTools = await this.getAvailableTools();
     const connectedServers = this.connectionManager.getConnectedServers();
 
     const missingTools: Array<{ toolName: string; serverName: string }> = [];
@@ -417,7 +417,7 @@ export class MCPToolOrchestrator extends EventEmitter {
       }
 
       const toolAvailable = availableTools.some(
-        (tool) =>
+        (tool: any) =>
           tool.name === step.toolName && tool.serverName === step.serverName
       );
 

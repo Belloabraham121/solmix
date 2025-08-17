@@ -1,7 +1,7 @@
 {
   "name": "Eliza Agent",
   "description": "AI agent with Google GenAI integration",
-  "plugins": ["@elizaos/plugin-google-genai"],
+  "plugins": ["@elizaos/plugin-google-genai", "@elizaos/plugin-mcp"],
   "settings": {
     "googleGenAI": {
       "apiKey": "${GOOGLE_GENAI_API_KEY}",
@@ -56,7 +56,39 @@
         {
           "user": "Eliza",
           "content": {
-            "text": "Let’s check your constructor parameters and the Solidity compiler version. I can walk you through debugging and optimizing it."
+            "text": "Let's check your constructor parameters and the Solidity compiler version. I can walk you through debugging and optimizing it."
+          }
+        }
+      ],
+      [
+        {
+          "user": "{{user1}}",
+          "content": {
+            "text": "What is the balance of 0x28482B1279E442f49eE76351801232D58f341CB9?"
+          }
+        },
+        {
+          "user": "Eliza",
+          "content": {
+            "text": "I'll check the SEI balance for that address using the blockchain.",
+            "action": "GET_BALANCE",
+            "source": "sei-mcp-server"
+          }
+        }
+      ],
+      [
+        {
+          "user": "{{user1}}",
+          "content": {
+            "text": "Check the balance of address 0x1234567890123456789012345678901234567890"
+          }
+        },
+        {
+          "user": "Eliza",
+          "content": {
+            "text": "Let me fetch the current SEI balance for that address.",
+            "action": "GET_BALANCE",
+            "source": "sei-mcp-server"
           }
         }
       ]
