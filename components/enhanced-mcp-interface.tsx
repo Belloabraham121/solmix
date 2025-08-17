@@ -484,7 +484,9 @@ export function EnhancedMCPInterface() {
                               : "bg-secondary"
                           }`}
                         >
-                          <div className="text-sm">{message.content}</div>
+                          <div className="text-sm break-words overflow-wrap-anywhere">
+                            {message.content}
+                          </div>
                           <div className="text-xs opacity-70 mt-1">
                             {message.timestamp.toLocaleTimeString()}
                           </div>
@@ -495,12 +497,16 @@ export function EnhancedMCPInterface() {
                 )}
               </ScrollArea>
               <div className="flex space-x-2">
-                <Input
+                <Textarea
                   value={currentMessage}
                   onChange={(e) => setCurrentMessage(e.target.value)}
                   placeholder="Type your message..."
-                  onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+                  onKeyPress={(e) =>
+                    e.key === "Enter" && !e.shiftKey && sendMessage()
+                  }
                   disabled={!elizaAgent}
+                  className="min-h-[60px] max-h-[120px] resize-none break-words overflow-wrap-anywhere word-break-break-all overflow-hidden w-full"
+                  rows={2}
                 />
                 <Button
                   onClick={sendMessage}
