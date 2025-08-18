@@ -165,7 +165,10 @@ async function analyzeAndExecuteWorkflow(
     const connectedServers = mcpClient.getConnectedServers();
     
     // Use Google GenAI to analyze if this is a multi-step workflow
-    const apiKey = process.env.GOOGLE_GENAI_API_KEY || "AIzaSyBUC7fcpxGlnxJ6qlt0LerVkxpaZrURE0k";
+    const apiKey = process.env.GOOGLE_GENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('GOOGLE_GENAI_API_KEY environment variable is required');
+    }
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -1049,9 +1052,7 @@ export async function POST(request: NextRequest) {
 
               try {
                 // Check if API key is available
-                const apiKey =
-                  process.env.GOOGLE_GENAI_API_KEY ||
-                  "AIzaSyBUC7fcpxGlnxJ6qlt0LerVkxpaZrURE0k";
+                const apiKey = process.env.GOOGLE_GENAI_API_KEY;
                 console.log(
                   "Google GenAI API Key available:",
                   apiKey ? "YES" : "NO"
@@ -1176,13 +1177,59 @@ Please respond naturally to the user's question using this data. Be helpful, con
                   mcpContext
                 );
               } else {
-                // Process normally with Eliza runtime
-                response = await processWithElizaRuntime(
-                  message,
-                  elizaRuntime,
-                  mcpClient,
-                  mcpContext
-                );
+                // No MCP tools needed - use Google AI for natural conversation
+                console.log("[NATURAL CONVERSATION] No MCP tools needed, using Google AI for natural conversation...");
+                
+                const apiKey = process.env.GOOGLE_GENAI_API_KEY;
+                
+                console.log("[NATURAL CONVERSATION] API Key available:", apiKey ? "YES" : "NO");
+                
+                try {
+                  console.log("[NATURAL CONVERSATION] Initializing Google AI...");
+                  const { GoogleGenerativeAI } = await import(
+                    "@google/generative-ai"
+                  );
+                  if (!apiKey) {
+                    throw new Error('GOOGLE_GENAI_API_KEY environment variable is required');
+                  }
+                  const genAI = new GoogleGenerativeAI(apiKey);
+                  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+                  const conversationPrompt = `You are Eliza, a friendly AI assistant helping with software development in a Monaco-based code editor called SolMix. You specialize in blockchain development, smart contracts, and general coding questions.
+
+User message: "${message}"
+
+Respond naturally and conversationally. If this is a greeting or casual message, respond warmly and personally. If it's a technical question, provide a helpful answer. Keep responses friendly, concise, and engaging.`;
+
+                  console.log("[NATURAL CONVERSATION] Sending request to Google AI...");
+                  const result = await model.generateContent(conversationPrompt);
+                  const aiResponse = result.response;
+                  const text = aiResponse.text();
+
+                  console.log("[NATURAL CONVERSATION] Google AI raw response:", text?.substring(0, 200) + "...");
+
+                  if (text && text.trim().length > 0) {
+                    response = text.trim();
+                    console.log("[NATURAL CONVERSATION] ✅ Google AI conversation response received successfully");
+                  } else {
+                    console.log("[NATURAL CONVERSATION] ❌ Empty response from Google AI, falling back to Eliza runtime");
+                    response = await processWithElizaRuntime(
+                      message,
+                      elizaRuntime,
+                      mcpClient,
+                      mcpContext
+                    );
+                  }
+                } catch (genAIError) {
+                  console.error("[NATURAL CONVERSATION] ❌ Google AI conversation error:", genAIError);
+                  console.log("[NATURAL CONVERSATION] Falling back to Eliza runtime due to Google AI error");
+                  response = await processWithElizaRuntime(
+                    message,
+                    elizaRuntime,
+                    mcpClient,
+                    mcpContext
+                  );
+                }
               }
             }
             }
