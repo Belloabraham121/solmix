@@ -152,6 +152,380 @@ async function processWithElizaRuntime(
   }
 }
 
+// AI-powered workflow orchestrator that can handle any multi-step MCP workflow
+async function analyzeAndExecuteWorkflow(
+  message: string,
+  mcpClient: any
+): Promise<{ response: string; usedMCP: boolean; isWorkflow: boolean }> {
+  console.log(`[AI Workflow] Analyzing message for workflow potential: "${message}"`);
+  
+  try {
+    // Get available MCP tools
+    const allTools = await mcpClient.getAllTools();
+    const connectedServers = mcpClient.getConnectedServers();
+    
+    // Use Google GenAI to analyze if this is a multi-step workflow
+    const apiKey = process.env.GOOGLE_GENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('GOOGLE_GENAI_API_KEY environment variable is required');
+    }
+    const { GoogleGenerativeAI } = await import("@google/generative-ai");
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const workflowAnalysisPrompt = `You are an AI workflow analyzer for MCP (Model Context Protocol) tools. Your job is to detect multi-step workflows.
+
+User Request: "${message}"
+
+Available MCP Tools:
+${allTools.map((tool: any) => `- ${tool.name} (${tool.serverName}): ${tool.description || 'Tool for ' + tool.name.replace(/_/g, ' ')}`).join('\n')}
+
+Connected Servers: ${connectedServers.map((server: any) => server.name).join(', ')}
+
+CRITICAL MULTI-STEP PATTERNS TO DETECT:
+
+1. BLOCKCHAIN + FILE OPERATIONS:
+   - "Check balance [address] and log/save/write to [filename]"
+   - "Get wallet info and store/remember as [name]"
+   - Any combination of cryptocurrency/blockchain data retrieval WITH file creation
+
+2. DATA RETRIEVAL + STORAGE:
+   - Fetching information THEN saving it somewhere
+   - Getting data from one system and putting it into another
+
+3. SEQUENTIAL OPERATIONS:
+   - "Do X and then Y"
+   - "Get X, remember as Y, and save to Z"
+   - Multiple actions connected by "and", "then", "also"
+
+EXAMPLE ANALYSIS:
+User says: "Check balance of 0x123... and log results to wallet.json"
+This is CLEARLY multi-step because:
+1. First: get_balance from sei-mcp-server
+2. Then: create_file using the balance data
+
+Your Analysis:
+The user request: "${message}"
+
+Does this request contain:
+- A blockchain/wallet address (0x...)? ${/0x[a-fA-F0-9]{40}/.test(message) ? 'YES' : 'NO'}
+- File-related words (log, save, write, file, json)? ${/(log|save|write|file|json|store|remember)/i.test(message) ? 'YES' : 'NO'}
+- Multiple actions (and, then, also)? ${/(and|then|also|,)/i.test(message) ? 'YES' : 'NO'}
+
+If ANY of these combinations are true, this is likely multi-step:
+- Blockchain address + file words = multi-step
+- Data retrieval + storage words = multi-step
+- Multiple connected actions = multi-step
+
+Respond with JSON only:
+
+For multi-step (when operations depend on each other):
+{
+  "isMultiStep": true,
+  "steps": [
+    {
+      "stepNumber": 1,
+      "action": "Check wallet balance",
+      "serverName": "sei-mcp-server",
+      "toolName": "get_balance",
+      "arguments": {
+        "address": "extracted address",
+        "network": "sei"
+      },
+      "dependsOn": null,
+      "extractData": "balance information"
+    },
+    {
+      "stepNumber": 2,
+      "action": "Save results to file",
+      "serverName": "browser-filesystem-server",
+      "toolName": "create_file",
+      "arguments": {
+        "path": "filename.json",
+        "content": "{}"
+      },
+      "dependsOn": 1,
+      "extractData": null
+    }
+  ],
+  "reasoning": "Request combines blockchain data retrieval with file storage - requires chaining tools"
+}
+
+For single-step (only one operation needed):
+{"isMultiStep": false}
+
+Be decisive: If the request involves getting data AND doing something with it, return isMultiStep: true.`;
+
+    const workflowAnalysis = await model.generateContent(workflowAnalysisPrompt);
+    const analysisText = workflowAnalysis.response.text();
+    
+    console.log(`[AI Workflow] AI Analysis Response:`, analysisText);
+    
+    // Parse the AI's workflow analysis
+    let workflowPlan;
+    try {
+      const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        console.log(`[AI Workflow] Extracted JSON:`, jsonMatch[0]);
+        workflowPlan = JSON.parse(jsonMatch[0]);
+      } else {
+        console.log(`[AI Workflow] No JSON found in response, treating as single-step`);
+        workflowPlan = { isMultiStep: false };
+      }
+    } catch (e) {
+      console.log(`[AI Workflow] Failed to parse AI response:`, e);
+      console.log(`[AI Workflow] Raw analysis text:`, analysisText);
+      workflowPlan = { isMultiStep: false };
+    }
+    
+    console.log(`[AI Workflow] Parsed workflow plan:`, JSON.stringify(workflowPlan, null, 2));
+    
+    // Manual pattern-based override if AI fails to detect obvious multi-step patterns
+    const hasEthAddress = /0x[a-fA-F0-9]{40}/.test(message);
+    const hasFileKeywords = /(log|save|write.*file|store|remember|analysis.*json|\.json)/i.test(message);
+    const hasMultipleActions = /(and|then|also|,)/i.test(message);
+    
+    console.log(`[AI Workflow] Pattern Analysis:`);
+    console.log(`  - Has ETH address: ${hasEthAddress}`);
+    console.log(`  - Has file keywords: ${hasFileKeywords}`);
+    console.log(`  - Has multiple actions: ${hasMultipleActions}`);
+    
+    if (!workflowPlan.isMultiStep && hasEthAddress && hasFileKeywords) {
+      console.log(`[AI Workflow] Manual override: Detected blockchain + file pattern, forcing multi-step`);
+      const addressMatch = message.match(/0x[a-fA-F0-9]{40}/);
+      const address = addressMatch ? addressMatch[0] : "";
+      
+      // Extract filename from message
+      const filenameMatch = message.match(/([\w-]+\.json)|([\w-]+\.\w+)/i);
+      const filename = filenameMatch ? filenameMatch[0] : 'wallet_analysis.json';
+      
+      workflowPlan = {
+        isMultiStep: true,
+        steps: [
+          {
+            stepNumber: 1,
+            action: "Check wallet balance",
+            serverName: "sei-mcp-server",
+            toolName: "get_balance",
+            arguments: {
+              address: address,
+              network: "sei"
+            },
+            dependsOn: null,
+            extractData: "balance information"
+          },
+          {
+            stepNumber: 2,
+            action: `Save results to ${filename}`,
+            serverName: "browser-filesystem-server",
+            toolName: "create_file",
+            arguments: {
+              path: filename,
+              content: "{}"
+            },
+            dependsOn: 1,
+            extractData: null
+          }
+        ],
+        reasoning: "Manual override: Request contains blockchain address with file operation keywords"
+      };
+      console.log(`[AI Workflow] Created manual workflow plan:`, JSON.stringify(workflowPlan, null, 2));
+    }
+    
+    if (!workflowPlan.isMultiStep) {
+      console.log(`[AI Workflow] Final determination: Not a multi-step workflow`);
+      return { response: "", usedMCP: false, isWorkflow: false };
+    }
+    
+    console.log(`[AI Workflow] Executing multi-step workflow:`, workflowPlan.reasoning);
+    
+    // Execute the workflow steps
+    const stepResults: Record<string, any> = {};
+    let finalResponse = `🤖 **AI Workflow Orchestrator**\n\n**Analysis**: ${workflowPlan.reasoning}\n\n**Execution Log**:\n\n`;
+    
+    for (const step of workflowPlan.steps || []) {
+      console.log(`[AI Workflow] Executing Step ${step.stepNumber}: ${step.action}`);
+      
+      try {
+        // Resolve dependencies - replace placeholders with actual data from previous steps
+        let resolvedArguments = step.arguments;
+        console.log(`[AI Workflow] Step ${step.stepNumber} original arguments:`, JSON.stringify(step.arguments, null, 2));
+        
+        if (step.dependsOn && stepResults[step.dependsOn as keyof typeof stepResults]) {
+          console.log(`[AI Workflow] Step ${step.stepNumber} depends on step ${step.dependsOn}`);
+          const previousResult = stepResults[step.dependsOn as keyof typeof stepResults];
+          console.log(`[AI Workflow] Previous step result:`, JSON.stringify(previousResult, null, 2));
+          
+          // Special handling for file creation that depends on blockchain data
+          if ((step.serverName === 'filesystem-server' || step.serverName === 'browser-filesystem-server') && 
+              (step.toolName === 'write_file' || step.toolName === 'create_file') &&
+              previousResult.result?.content?.[0]?.text) {
+            
+            console.log(`[AI Workflow] File creation step detected with blockchain data dependency`);
+            
+            // Extract the blockchain data and format it as JSON for the file
+            const blockchainData = previousResult.result.content[0].text;
+            let formattedContent;
+            
+            try {
+              // Try to parse the blockchain data as JSON and reformat it
+              const parsedData = JSON.parse(blockchainData);
+              formattedContent = JSON.stringify({
+                timestamp: new Date().toISOString(),
+                address: resolvedArguments.address || step.arguments.address || "unknown",
+                analysis_type: "wallet_balance",
+                data: parsedData
+              }, null, 2);
+            } catch (e) {
+              // If not valid JSON, create a structured format
+              formattedContent = JSON.stringify({
+                timestamp: new Date().toISOString(),
+                address: resolvedArguments.address || step.arguments.address || "unknown",
+                analysis_type: "wallet_balance",
+                raw_data: blockchainData
+              }, null, 2);
+            }
+            
+            resolvedArguments = {
+              ...step.arguments,
+              content: formattedContent
+            };
+            
+            console.log(`[AI Workflow] Formatted file content:`, formattedContent.substring(0, 200) + '...');
+          } else {
+            // Use AI for general dependency resolution
+            resolvedArguments = await resolveDependencies(step.arguments, previousResult, model);
+          }
+          
+          console.log(`[AI Workflow] Step ${step.stepNumber} resolved arguments:`, JSON.stringify(resolvedArguments, null, 2));
+        }
+        
+        // Execute the MCP tool call
+        let toolResult;
+        
+        // Special handling for file operations - redirect to browser file system
+        if ((step.serverName === 'filesystem-server' || step.serverName === 'browser-filesystem-server') && 
+            (step.toolName === 'write_file' || step.toolName === 'create_file')) {
+          console.log(`[AI Workflow] Redirecting file operation to browser file system`);
+          
+          // Create the file operation message for the frontend
+          const fileData = {
+            action: 'create_browser_file',
+            name: resolvedArguments.path ? extractFileNameFromPath(resolvedArguments.path) : 'generated_file.json',
+            content: resolvedArguments.content || '',
+            extension: resolvedArguments.path ? extractExtensionFromPath(resolvedArguments.path) : 'json',
+            parentId: resolvedArguments.parentId
+          };
+          
+          // Include the file creation JSON in the final response for the MCP interface to process
+          // Use special delimiters to ensure proper parsing
+          const fileDataJSON = JSON.stringify(fileData);
+          console.log(`[AI Workflow] Generated file creation JSON:`, fileDataJSON);
+          finalResponse += `\n\n---FILE_CREATION_START---\n${fileDataJSON}\n---FILE_CREATION_END---\n\n`;
+          
+          toolResult = {
+            content: [{
+              type: 'text',
+              text: 'File operation prepared for browser'
+            }],
+            isError: false,
+            fileCreation: fileData // Add special marker for file creation
+          };
+          
+          console.log(`[AI Workflow] Browser file operation prepared:`, fileData);
+        } else {
+          // Normal MCP tool call
+          toolResult = await mcpClient.callTool({
+            toolName: step.toolName,
+            serverName: step.serverName,
+            arguments: resolvedArguments,
+          });
+        }
+        
+        // Store result for potential use in next steps
+        (stepResults as any)[step.stepNumber] = {
+          result: toolResult,
+          extractedData: step.extractData ? await extractDataFromResult(toolResult, step.extractData, model) : null
+        };
+        
+        finalResponse += `**Step ${step.stepNumber}**: ✅ ${step.action}\n`;
+        
+        // Add relevant details from the result
+        if (toolResult?.content?.[0]?.text) {
+          const resultText = toolResult.content[0].text;
+          if (step.serverName === 'sei-mcp-server' && step.toolName === 'get_balance') {
+            try {
+              const balanceData = JSON.parse(resultText);
+              const balance = balanceData.ether || balanceData.balance || balanceData.wei || '0';
+              finalResponse += `   - Balance: ${balance} SEI\n`;
+            } catch (e) {
+              finalResponse += `   - Result: ${resultText.substring(0, 100)}...\n`;
+            }
+          } else if (step.serverName === 'filesystem-server') {
+            if (step.toolName === 'write_file') {
+              finalResponse += `   - File written successfully\n`;
+            } else {
+              finalResponse += `   - File operation completed\n`;
+            }
+          } else {
+            finalResponse += `   - Completed successfully\n`;
+          }
+        } else {
+          finalResponse += `   - Tool executed (no text response)\n`;
+        }
+        
+        // Log the full tool result for debugging
+        console.log(`[AI Workflow] Step ${step.stepNumber} full result:`, JSON.stringify(toolResult, null, 2));
+        
+      } catch (stepError) {
+        console.error(`[AI Workflow] Step ${step.stepNumber} failed:`, stepError);
+        finalResponse += `**Step ${step.stepNumber}**: ❌ Failed - ${stepError instanceof Error ? stepError.message : String(stepError)}\n`;
+      }
+    }
+    
+    finalResponse += `\n🎯 **Workflow completed** - ${workflowPlan.steps?.length || 0} steps executed across multiple MCP servers.`;
+    
+    return {
+      response: finalResponse,
+      usedMCP: true,
+      isWorkflow: true
+    };
+    
+  } catch (error) {
+    console.error(`[AI Workflow] Workflow analysis failed:`, error);
+    return { response: "", usedMCP: false, isWorkflow: false };
+  }
+}
+
+// Helper function to resolve dependencies between workflow steps
+async function resolveDependencies(toolArgs: any, previousStepResult: any, model: any): Promise<any> {
+  // Use AI to intelligently resolve placeholders in arguments based on previous step results
+  const resolvePrompt = `Given these arguments with potential placeholders: ${JSON.stringify(toolArgs)}\n\nAnd this previous step result: ${JSON.stringify(previousStepResult)}\n\nResolve any placeholders and return the final arguments as JSON. If no placeholders exist, return the original arguments.`;
+  
+  try {
+    const resolution = await model.generateContent(resolvePrompt);
+    const resolvedText = resolution.response.text();
+    const jsonMatch = resolvedText.match(/\{[\s\S]*\}/);
+    return jsonMatch ? JSON.parse(jsonMatch[0]) : toolArgs;
+  } catch (e) {
+    return toolArgs;
+  }
+}
+
+// Helper function to extract specific data from tool results
+async function extractDataFromResult(toolResult: any, extractInstruction: string, model: any): Promise<any> {
+  const extractPrompt = `Extract the following from this tool result: "${extractInstruction}"\n\nTool Result: ${JSON.stringify(toolResult)}\n\nReturn the extracted data as a JSON object.`;
+  
+  try {
+    const extraction = await model.generateContent(extractPrompt);
+    const extractedText = extraction.response.text();
+    const jsonMatch = extractedText.match(/\{[\s\S]*\}/);
+    return jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // Use MCP tools for SEI queries instead of the separate plugin
 async function processMessageWithMCPTools(
   message: string,
@@ -242,7 +616,10 @@ async function processMessageWithMCPTools(
 
       let searchText = `Unable to find documentation for "${searchQuery}"`;
       if (toolResult?.content && toolResult.content[0]?.text) {
-        searchText = `Here's what I found in the Sei documentation:\n\n${toolResult.content[0].text}`;
+        // Return the raw data - it will be processed by Google GenAI later
+        const rawContent = toolResult.content[0].text;
+        console.log(`[MCP Tools] Raw documentation content:`, rawContent.substring(0, 200) + "...");
+        searchText = rawContent;
       }
 
       return {
@@ -486,6 +863,20 @@ async function shouldCallMCPTool(
   return { shouldCall: false };
 }
 
+// Helper functions for file path extraction
+function extractFileNameFromPath(path: string): string {
+  if (!path) return "untitled";
+  const parts = path.split('/');
+  return parts[parts.length - 1] || "untitled";
+}
+
+function extractExtensionFromPath(path: string): string {
+  if (!path) return "json";
+  const fileName = extractFileNameFromPath(path);
+  const parts = fileName.split('.');
+  return parts.length > 1 ? parts[parts.length - 1] : "json";
+}
+
 export async function POST(request: NextRequest) {
   console.log("\n🚀🚀🚀 [ELIZA-POST] POST function called! 🚀🚀🚀");
   try {
@@ -631,15 +1022,27 @@ export async function POST(request: NextRequest) {
           try {
             console.log("Eliza runtime available:", !!elizaRuntime);
 
-            // First, try MCP tools for blockchain queries
-            console.log("Trying MCP tools first...");
-            const mcpResult = await processMessageWithMCPTools(
+            // First, check if this is a complex multi-step workflow
+            console.log("Checking for AI workflow potential...");
+            const workflowResult = await analyzeAndExecuteWorkflow(
               message,
               mcpClient
             );
-            console.log("MCP tools result:", mcpResult);
+            console.log("AI workflow result:", workflowResult);
 
-            if (mcpResult.usedMCP) {
+            if (workflowResult.isWorkflow) {
+              console.log("AI workflow orchestrator handled the message");
+              response = workflowResult.response;
+            } else {
+              // Second, try MCP tools for blockchain queries
+              console.log("Trying MCP tools for single-step operations...");
+              const mcpResult = await processMessageWithMCPTools(
+                message,
+                mcpClient
+              );
+              console.log("MCP tools result:", mcpResult);
+
+              if (mcpResult.usedMCP) {
               console.log(
                 "MCP tools handled the message, now processing through AI..."
               );
@@ -649,9 +1052,7 @@ export async function POST(request: NextRequest) {
 
               try {
                 // Check if API key is available
-                const apiKey =
-                  process.env.GOOGLE_GENAI_API_KEY ||
-                  "AIzaSyBUC7fcpxGlnxJ6qlt0LerVkxpaZrURE0k";
+                const apiKey = process.env.GOOGLE_GENAI_API_KEY;
                 console.log(
                   "Google GenAI API Key available:",
                   apiKey ? "YES" : "NO"
@@ -666,14 +1067,34 @@ export async function POST(request: NextRequest) {
                   "@google/generative-ai"
                 );
                 const genAI = new GoogleGenerativeAI(apiKey);
-                const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-                const prompt = `User asked: "${message}"
+                // Determine if this is a documentation search or other query type
+                const lowerMessage = message.toLowerCase();
+                const isDocumentationSearch = lowerMessage.includes("search") && (lowerMessage.includes("doc") || lowerMessage.includes("staking") || lowerMessage.includes("sei"));
+                
+                let prompt;
+                if (isDocumentationSearch) {
+                  prompt = `User asked: "${message}"
+
+I found this documentation content:
+${mcpResult.response}
+
+Please format and present this documentation in a clean, readable way. Extract the key information and organize it properly. Remove any HTML artifacts, garbled text, or formatting issues. Focus on:
+1. The main topic/title
+2. Key features and functionality
+3. Important technical details
+4. Any code examples or usage instructions
+
+Present the information in a well-structured, easy-to-read format that directly answers the user's question about ${message.replace(/search|docs|documentation|for|about|sei/gi, "").trim()}.`;
+                } else {
+                  prompt = `User asked: "${message}"
 
 I retrieved this blockchain data:
 ${mcpResult.response}
 
 Please provide a natural, helpful response to the user's question using this data. Be conversational and explain any technical information clearly. Keep the response concise but informative.`;
+                }
 
                 console.log(
                   "Sending to Google GenAI:",
@@ -756,14 +1177,61 @@ Please respond naturally to the user's question using this data. Be helpful, con
                   mcpContext
                 );
               } else {
-                // Process normally with Eliza runtime
-                response = await processWithElizaRuntime(
-                  message,
-                  elizaRuntime,
-                  mcpClient,
-                  mcpContext
-                );
+                // No MCP tools needed - use Google AI for natural conversation
+                console.log("[NATURAL CONVERSATION] No MCP tools needed, using Google AI for natural conversation...");
+                
+                const apiKey = process.env.GOOGLE_GENAI_API_KEY;
+                
+                console.log("[NATURAL CONVERSATION] API Key available:", apiKey ? "YES" : "NO");
+                
+                try {
+                  console.log("[NATURAL CONVERSATION] Initializing Google AI...");
+                  const { GoogleGenerativeAI } = await import(
+                    "@google/generative-ai"
+                  );
+                  if (!apiKey) {
+                    throw new Error('GOOGLE_GENAI_API_KEY environment variable is required');
+                  }
+                  const genAI = new GoogleGenerativeAI(apiKey);
+                  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+                  const conversationPrompt = `You are Eliza, a friendly AI assistant helping with software development in a Monaco-based code editor called SolMix. You specialize in blockchain development, smart contracts, and general coding questions.
+
+User message: "${message}"
+
+Respond naturally and conversationally. If this is a greeting or casual message, respond warmly and personally. If it's a technical question, provide a helpful answer. Keep responses friendly, concise, and engaging.`;
+
+                  console.log("[NATURAL CONVERSATION] Sending request to Google AI...");
+                  const result = await model.generateContent(conversationPrompt);
+                  const aiResponse = result.response;
+                  const text = aiResponse.text();
+
+                  console.log("[NATURAL CONVERSATION] Google AI raw response:", text?.substring(0, 200) + "...");
+
+                  if (text && text.trim().length > 0) {
+                    response = text.trim();
+                    console.log("[NATURAL CONVERSATION] ✅ Google AI conversation response received successfully");
+                  } else {
+                    console.log("[NATURAL CONVERSATION] ❌ Empty response from Google AI, falling back to Eliza runtime");
+                    response = await processWithElizaRuntime(
+                      message,
+                      elizaRuntime,
+                      mcpClient,
+                      mcpContext
+                    );
+                  }
+                } catch (genAIError) {
+                  console.error("[NATURAL CONVERSATION] ❌ Google AI conversation error:", genAIError);
+                  console.log("[NATURAL CONVERSATION] Falling back to Eliza runtime due to Google AI error");
+                  response = await processWithElizaRuntime(
+                    message,
+                    elizaRuntime,
+                    mcpClient,
+                    mcpContext
+                  );
+                }
               }
+            }
             }
           } catch (elizaError) {
             console.error("Eliza runtime error:", elizaError);

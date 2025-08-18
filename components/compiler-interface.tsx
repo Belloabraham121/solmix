@@ -843,7 +843,7 @@ export default function CompilerInterface({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="h-8 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-3">
+      <div className="h-8 bg-black border-dashed border-b border-slate-700 flex items-center justify-between px-3">
         <span className="text-sm font-medium text-slate-300">
           Solidity Compiler
         </span>
@@ -858,18 +858,18 @@ export default function CompilerInterface({
 
       <div className="flex-1 overflow-auto">
         {/* Compiler Configuration */}
-        <div className="border-b border-slate-700">
+        <div className="border-b border-gray-700">
           <button
             onClick={() => toggleSection("compiler")}
-            className="w-full flex items-center justify-between p-3 hover:bg-slate-800 text-left"
+            className="w-full flex items-center justify-between p-3 hover:bg-gray-800 text-left"
           >
-            <span className="text-sm font-medium text-slate-300">
+            <span className="text-sm font-medium text-gray-300">
               Compiler Configuration
             </span>
             {expandedSections.compiler ? (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
+              <ChevronDown className="w-4 h-4 text-gray-400" />
             ) : (
-              <ChevronRight className="w-4 h-4 text-slate-400" />
+              <ChevronRight className="w-4 h-4 text-gray-400" />
             )}
           </button>
 
@@ -877,7 +877,7 @@ export default function CompilerInterface({
             <div className="px-3 pb-3 space-y-3">
               {/* Compiler Version */}
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">
+                <label className="text-xs text-gray-400 mb-1 block">
                   Compiler Version
                 </label>
                 <CompilerVersionSelect
@@ -901,7 +901,7 @@ export default function CompilerInterface({
 
               {/* Auto Compile */}
               <div className="flex items-center justify-between">
-                <label className="text-xs text-slate-400">Auto Compile</label>
+                <label className="text-xs text-gray-400">Auto Compile</label>
                 <Switch
                   checked={isAutoCompile}
                   onCheckedChange={setIsAutoCompile}
@@ -911,7 +911,7 @@ export default function CompilerInterface({
               {/* Optimization */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs text-slate-400">
+                  <label className="text-xs text-gray-400">
                     Enable Optimization
                   </label>
                   <Switch
@@ -921,20 +921,20 @@ export default function CompilerInterface({
                 </div>
                 {isOptimizationEnabled && (
                   <div>
-                    <label className="text-xs text-slate-400 mb-1 block">
+                    <label className="text-xs text-gray-400 mb-1 block">
                       Runs
                     </label>
                     <Select
                       value={optimizationRuns}
                       onValueChange={setOptimizationRuns}
                     >
-                      <SelectTrigger className="h-10 bg-slate-800 border-slate-600 text-white min-w-[120px]">
+                      <SelectTrigger className="h-10 bg-gray-800 border-gray-600 text-white min-w-[120px]">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-800 border-slate-700 min-w-[150px]">
+                      <SelectContent className="bg-gray-800 border-gray-700 min-w-[150px]">
                         <SelectItem
                           value="200"
-                          className="text-sm py-2 px-3 hover:bg-slate-600 focus:bg-slate-600 text-white"
+                          className="text-sm py-2 px-3 hover:bg-gray-600 focus:bg-gray-600 text-white"
                         >
                           200
                         </SelectItem>
@@ -968,7 +968,7 @@ export default function CompilerInterface({
                 disabled={
                   isCompiling || !activeFile || activeFile.extension !== "sol"
                 }
-                className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                className="w-full bg-blue-800 hover:bg-blue-700 text-white"
               >
                 {isCompiling ? (
                   <>
@@ -995,18 +995,18 @@ export default function CompilerInterface({
         </div>
 
         {/* Compilation Results */}
-        <div className="border-b border-slate-700">
+        <div className="border-b border-gray-700">
           <button
             onClick={() => toggleSection("compilation")}
-            className="w-full flex items-center justify-between p-3 hover:bg-slate-800 text-left"
+            className="w-full flex items-center justify-between p-3 hover:bg-gray-800 text-left"
           >
-            <span className="text-sm font-medium text-slate-300">
+            <span className="text-sm font-medium text-gray-300">
               Compilation Results
             </span>
             {expandedSections.compilation ? (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
+              <ChevronDown className="w-4 h-4 text-gray-400" />
             ) : (
-              <ChevronRight className="w-4 h-4 text-slate-400" />
+              <ChevronRight className="w-4 h-4 text-gray-400" />
             )}
           </button>
 
@@ -1027,7 +1027,7 @@ export default function CompilerInterface({
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-slate-100">
+                        <span className="text-sm font-medium text-gray-100">
                           {result.contractName}
                         </span>
                         {result.status === "success" && (
@@ -1146,7 +1146,7 @@ export default function CompilerInterface({
             </div>
             <div className="flex items-center gap-2">
               <div
-                className="h-6 px-2 text-xs cursor-pointer hover:bg-slate-700 rounded transition-colors"
+                className="h-6 px-2 text-xs cursor-pointer hover:bg-gray-700 rounded transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   clearDebugLogs();
@@ -1168,7 +1168,7 @@ export default function CompilerInterface({
           {expandedSections.debugLogs && (
             <div className="px-3 pb-3 space-y-2 max-h-96 overflow-y-auto">
               {debugLogs.length === 0 ? (
-                <div className="text-center py-4 text-slate-400">
+                <div className="text-center py-4 text-gray-400">
                   <div className="text-sm">No debug logs</div>
                   <div className="text-xs">
                     Compile a contract to see detailed logs
@@ -1205,19 +1205,19 @@ export default function CompilerInterface({
                           <span className="font-medium uppercase">
                             {log.level}
                           </span>
-                          <span className="text-slate-500">
+                          <span className="text-gray-500">
                             [{log.source.toUpperCase()}]
                           </span>
                         </div>
-                        <span className="text-slate-500">{timestamp}</span>
+                        <span className="text-gray-500">{timestamp}</span>
                       </div>
-                      <div className="text-slate-300 mb-1">{log.message}</div>
+                      <div className="text-gray-300 mb-1">{log.message}</div>
                       {log.details && showDebugLogs && (
                         <details className="mt-1">
-                          <summary className="cursor-pointer text-slate-400 hover:text-slate-300">
+                          <summary className="cursor-pointer text-gray-400 hover:text-gray-300">
                             Details
                           </summary>
-                          <pre className="mt-1 text-xs text-slate-400 bg-slate-900/50 p-2 rounded overflow-x-auto">
+                          <pre className="mt-1 text-xs text-gray-400 bg-gray-900/50 p-2 rounded overflow-x-auto">
                             {safeStringify(log.details)}
                           </pre>
                         </details>
@@ -1274,7 +1274,7 @@ export default function CompilerInterface({
               {compilationResults.map((result) => (
                 <div
                   key={result.contractName}
-                  className="bg-slate-800 rounded border border-slate-700 p-3"
+                  className="bg-gray-800 rounded border border-gray-700 p-3"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-slate-100">
@@ -1291,14 +1291,14 @@ export default function CompilerInterface({
                       >
                         {result.status}
                       </Badge>
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-gray-400">
                         {result.size} bytes
                       </span>
                     </div>
                   </div>
 
                   <Tabs defaultValue="abi" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 bg-slate-700">
+                    <TabsList className="grid w-full grid-cols-3 bg-gray-700">
                       <TabsTrigger value="abi" className="text-xs">
                         ABI
                       </TabsTrigger>
@@ -1311,7 +1311,7 @@ export default function CompilerInterface({
                     </TabsList>
                     <TabsContent value="abi" className="mt-2">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-slate-400">ABI</span>
+                        <span className="text-xs text-gray-400">ABI</span>
                         <div className="flex gap-1">
                           <Button
                             variant="ghost"
@@ -1321,7 +1321,7 @@ export default function CompilerInterface({
                                 JSON.stringify(result.abi, null, 2)
                               )
                             }
-                            className="h-6 w-6 p-0 text-slate-400 hover:text-white"
+                            className="h-6 w-6 p-0 text-gray-400 hover:text-white"
                           >
                             <Copy className="w-3 h-3" />
                           </Button>
@@ -1331,14 +1331,14 @@ export default function CompilerInterface({
                             onClick={() =>
                               downloadArtifact(result.contractName, "abi")
                             }
-                            className="h-6 w-6 p-0 text-slate-400 hover:text-white"
+                            className="h-6 w-6 p-0 text-gray-400 hover:text-white"
                           >
                             <Download className="w-3 h-3" />
                           </Button>
                         </div>
                       </div>
-                      <div className="bg-slate-900 rounded p-2 max-h-32 overflow-auto">
-                        <pre className="text-xs text-slate-300">
+                      <div className="bg-gray-900 rounded p-2 max-h-32 overflow-auto">
+                        <pre className="text-xs text-gray-300">
                           {JSON.stringify(result.abi, null, 2)}
                         </pre>
                       </div>
@@ -1355,7 +1355,7 @@ export default function CompilerInterface({
                                 JSON.stringify(result.metadata, null, 2)
                               )
                             }
-                            className="h-6 w-6 p-0 text-slate-400 hover:text-white"
+                            className="h-6 w-6 p-0 text-gray-400 hover:text-white"
                           >
                             <Copy className="w-3 h-3" />
                           </Button>
@@ -1365,21 +1365,21 @@ export default function CompilerInterface({
                             onClick={() =>
                               downloadArtifact(result.contractName, "metadata")
                             }
-                            className="h-6 w-6 p-0 text-slate-400 hover:text-white"
+                            className="h-6 w-6 p-0 text-gray-400 hover:text-white"
                           >
                             <Download className="w-3 h-3" />
                           </Button>
                         </div>
                       </div>
-                      <div className="bg-slate-900 rounded p-2 max-h-32 overflow-auto">
-                        <pre className="text-xs text-slate-300">
+                      <div className="bg-gray-900 rounded p-2 max-h-32 overflow-auto">
+                        <pre className="text-xs text-gray-300">
                           {JSON.stringify(result.metadata, null, 2)}
                         </pre>
                       </div>
                     </TabsContent>
                     <TabsContent value="bytecode" className="mt-2">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-slate-400">Bytecode</span>
+                        <span className="text-xs text-gray-400">Bytecode</span>
                         <div className="flex gap-1">
                           <Button
                             variant="ghost"
@@ -1401,8 +1401,8 @@ export default function CompilerInterface({
                           </Button>
                         </div>
                       </div>
-                      <div className="bg-slate-900 rounded p-2 max-h-32 overflow-auto">
-                        <div className="text-xs text-slate-300 font-mono break-all">
+                      <div className="bg-gray-900 rounded p-2 max-h-32 overflow-auto">
+                        <div className="text-xs text-gray-300 font-mono break-all">
                           {result.bytecode}
                         </div>
                       </div>
@@ -1414,18 +1414,18 @@ export default function CompilerInterface({
           )}
         </div>
 
-        <div className="border-b border-slate-700">
+        <div className="border-b border-gray-700">
           <button
             onClick={() => toggleSection("deploy")}
-            className="w-full flex items-center justify-between p-3 hover:bg-slate-800 text-left"
+            className="w-full flex items-center justify-between p-3 hover:bg-gray-800 text-left"
           >
-            <span className="text-sm font-medium text-slate-300">
+            <span className="text-sm font-medium text-gray-300">
               Deploy & Run Transactions
             </span>
             {expandedSections.deploy ? (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
+              <ChevronDown className="w-4 h-4 text-gray-400" />
             ) : (
-              <ChevronRight className="w-4 h-4 text-slate-400" />
+              <ChevronRight className="w-4 h-4 text-gray-400" />
             )}
           </button>
 
@@ -1434,17 +1434,17 @@ export default function CompilerInterface({
               {/* Environment & Account */}
               <div className="space-y-3">
                 <div>
-                  <Label className="text-xs text-slate-400 mb-1 block">
+                  <Label className="text-xs text-gray-400 mb-1 block">
                     Environment
                   </Label>
                   <Select
                     value={selectedNetwork}
                     onValueChange={setSelectedNetwork}
                   >
-                    <SelectTrigger className="h-8 bg-slate-800 border-slate-600 text-slate-100">
+                    <SelectTrigger className="h-8 bg-gray-800 border-gray-600 text-gray-100">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700">
+                    <SelectContent className="bg-gray-800 border-gray-700">
                       <SelectItem value="local">
                         <div className="flex items-center gap-2">
                           <Globe className="w-3 h-3" />
@@ -1464,19 +1464,19 @@ export default function CompilerInterface({
                 </div>
 
                 <div>
-                  <Label className="text-xs text-slate-400 mb-1 block">
+                  <Label className="text-xs text-gray-400 mb-1 block">
                     Wallet Connection
                   </Label>
                   {isConnected ? (
                     <div className="space-y-2">
-                      <div className="text-xs text-green-400 bg-slate-800 p-2 rounded border border-slate-600">
+                      <div className="text-xs text-green-400 bg-gray-800 p-2 rounded border border-gray-600">
                         Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
                       </div>
                       <Button
                         onClick={() => disconnect()}
                         variant="outline"
                         size="sm"
-                        className="w-full h-8 bg-slate-800 border-slate-600 text-slate-100 hover:bg-slate-700"
+                        className="w-full h-8 bg-gray-800 border-gray-600 text-gray-100 hover:bg-gray-700"
                       >
                         <Plug className="w-3 h-3 mr-1" />
                         Disconnect
@@ -1489,7 +1489,7 @@ export default function CompilerInterface({
                           onClick={openConnectModal}
                           variant="outline"
                           size="sm"
-                          className="w-full h-8 bg-slate-800 border-slate-600 text-slate-100 hover:bg-slate-700"
+                          className="w-full h-8 bg-gray-800 border-gray-600 text-gray-100 hover:bg-gray-700"
                         >
                           <Wallet className="w-3 h-3 mr-1" />
                           Connect Wallet
@@ -1501,23 +1501,23 @@ export default function CompilerInterface({
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <Label className="text-xs text-slate-400 mb-1 block">
+                    <Label className="text-xs text-gray-400 mb-1 block">
                       Gas Limit
                     </Label>
                     <Input
                       value={gasLimit}
                       onChange={(e) => setGasLimit(e.target.value)}
-                      className="h-8 bg-slate-800 border-slate-600 text-slate-100"
+                      className="h-8 bg-gray-800 border-gray-600 text-gray-100"
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-slate-400 mb-1 block">
+                    <Label className="text-xs text-gray-400 mb-1 block">
                       Gas Price (Gwei)
                     </Label>
                     <Input
                       value={gasPrice}
                       onChange={(e) => setGasPrice(e.target.value)}
-                      className="h-8 bg-slate-800 border-slate-600 text-slate-100"
+                      className="h-8 bg-gray-800 border-gray-600 text-gray-100"
                     />
                   </div>
                 </div>
@@ -1526,17 +1526,17 @@ export default function CompilerInterface({
               {/* Contract Deployment */}
               <div className="space-y-3">
                 <div>
-                  <Label className="text-xs text-slate-400 mb-1 block">
+                  <Label className="text-xs text-gray-400 mb-1 block">
                     Contract
                   </Label>
                   <Select
                     value={selectedContract}
                     onValueChange={setSelectedContract}
                   >
-                    <SelectTrigger className="h-8 bg-slate-800 border-slate-600 text-slate-100">
+                    <SelectTrigger className="h-8 bg-gray-800 border-gray-600 text-gray-100">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700">
+                    <SelectContent className="bg-gray-800 border-gray-700">
                       {compilationResults.map((result) => (
                         <SelectItem
                           key={result.contractName}
@@ -1555,7 +1555,7 @@ export default function CompilerInterface({
                   ?.abi.find((item) => item.type === "constructor")?.inputs
                   .length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-xs text-slate-400">
+                    <Label className="text-xs text-gray-400">
                       Constructor Parameters
                     </Label>
                     {compilationResults
@@ -1563,7 +1563,7 @@ export default function CompilerInterface({
                       ?.abi.find((item) => item.type === "constructor")
                       ?.inputs.map((input: any, i: number) => (
                         <div key={i}>
-                          <Label className="text-xs text-slate-500 mb-1 block">
+                          <Label className="text-xs text-gray-500 mb-1 block">
                             {input.name} ({input.type})
                           </Label>
                           <Input
@@ -1575,7 +1575,7 @@ export default function CompilerInterface({
                               }))
                             }
                             placeholder={`Enter ${input.type}`}
-                            className="h-7 bg-slate-800 border-slate-600 text-slate-100 text-xs"
+                            className="h-7 bg-gray-800 border-gray-600 text-gray-100 text-xs"
                           />
                         </div>
                       ))}
@@ -1584,7 +1584,7 @@ export default function CompilerInterface({
 
                 <Button
                   onClick={handleDeploy}
-                  className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                   disabled={
                     !selectedContract ||
                     !isConnected ||
@@ -1619,27 +1619,27 @@ export default function CompilerInterface({
               {/* Deployed Contracts */}
               {deployedContracts.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-xs text-slate-400">
+                  <Label className="text-xs text-gray-400">
                     Deployed Contracts
                   </Label>
                   {deployedContracts.map((contract) => (
                     <div
                       key={contract.id}
-                      className="bg-slate-800 rounded border border-slate-700 p-3"
+                      className="bg-gray-800 rounded border border-gray-700 p-3"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-slate-100">
+                        <span className="text-sm font-medium text-gray-100">
                           {contract.name}
                         </span>
                         <Badge variant="outline" className="text-xs">
                           {contract.network}
                         </Badge>
                       </div>
-                      <div className="text-xs text-slate-400 mb-1 font-mono">
+                      <div className="text-xs text-gray-400 mb-1 font-mono">
                         {contract.address}
                       </div>
                       {contract.transactionHash && (
-                        <div className="text-xs text-slate-500 mb-2 font-mono">
+                        <div className="text-xs text-gray-500 mb-2 font-mono">
                           Tx: {contract.transactionHash.slice(0, 10)}...
                           {contract.transactionHash.slice(-8)}
                         </div>
@@ -1652,10 +1652,10 @@ export default function CompilerInterface({
                           .map((func: any, i: number) => (
                             <div
                               key={i}
-                              className="border border-slate-600 rounded p-2"
+                              className="border border-gray-600 rounded p-2"
                             >
                               <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-medium text-slate-300">
+                                <span className="text-xs font-medium text-gray-300">
                                   {func.name}
                                 </span>
                                 <div className="flex gap-1">

@@ -71,6 +71,7 @@
     "react-day-picker": "9.8.0",
     "react-dom": "^18",
     "react-hook-form": "^7.60.0",
+    "react-markdown": "^10.1.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.4",
     "solc": "latest",
@@ -84,7 +85,14 @@
     "vscode-languageserver-protocol": "^3.17.5",
     "vscode-ws-jsonrpc": "^3.5.0",
     "wagmi": "^2.16.3",
-    "zod": "3.25.67"
+    "zod": "3.25.67",
+    "rete": "^2.0.3",
+    "rete-react-plugin": "^2.0.6",
+    "rete-area-plugin": "^2.0.4",
+    "rete-connection-plugin": "^2.0.2",
+    "rete-context-menu-plugin": "^2.0.2",
+    "rete-minimap-plugin": "^2.0.1",
+    "rete-render-utils": "^2.0.2"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",

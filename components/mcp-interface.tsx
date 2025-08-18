@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
 
 interface MCPMessage {
   id: string;
@@ -379,12 +380,12 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || !isElizaConnected || !elizaAgent) return;
 
-    const userMessage: MCPMessage = {
-      id: Date.now().toString(),
-      type: "user",
-      content: inputMessage,
-      timestamp: new Date(),
-    };
+      const userMessage: MCPMessage = {
+        id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: "user",
+        content: inputMessage,
+        timestamp: new Date(),
+      };
 
     setMessages((prev) => [...prev, userMessage]);
     const messageToSend = inputMessage;
@@ -410,7 +411,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
 
           // Add routing notification message
           const routingNotification: MCPMessage = {
-            id: (Date.now() - 1).toString(),
+            id: `system-routing-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             type: "system",
             content: routingMessage,
             timestamp: new Date(),
@@ -450,6 +451,11 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, assistantMessage]);
+
+        // Check if the response contains file creation instructions
+        if (result.message && typeof result.message === 'string') {
+          await handleFileCreationFromResponse(result.message);
+        }
       } else {
         throw new Error(result.error || "Failed to get response");
       }
@@ -508,34 +514,131 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
     setShowToolsModal(true);
   };
 
+  // Function to handle file creation from AI orchestrator response
+  const handleFileCreationFromResponse = async (response: string) => {
+    try {
+      // Look for file creation delimiters in the response
+      const startDelimiter = '---FILE_CREATION_START---';
+      const endDelimiter = '---FILE_CREATION_END---';
+      
+      console.log('[FILE CREATION] Response text:', response.substring(0, 500) + '...');
+      
+      let startIndex = response.indexOf(startDelimiter);
+      let foundCount = 0;
+      
+      while (startIndex !== -1) {
+        const endIndex = response.indexOf(endDelimiter, startIndex);
+        
+        if (endIndex !== -1) {
+          // Extract JSON between delimiters
+          const jsonString = response.substring(
+            startIndex + startDelimiter.length,
+            endIndex
+          ).trim();
+          
+          foundCount++;
+          console.log(`[FILE CREATION] Found file creation data ${foundCount}:`, jsonString);
+          
+          try {
+            const fileData = JSON.parse(jsonString);
+            
+            if (fileData.action === 'create_browser_file') {
+              console.log('[FILE CREATION] Processing file creation:', fileData);
+              
+              // Import file system dynamically to avoid SSR issues
+              const { fileSystem } = await import('@/lib/file-system');
+              
+              // Extract file details
+              const fileName = fileData.name || 'untitled';
+              const extension = fileData.extension || 'txt';
+              const content = fileData.content || '';
+              const parentId = fileData.parentId;
+              
+              // Ensure the filename has the proper extension
+              const fullFileName = fileName.includes('.') ? fileName : `${fileName}.${extension}`;
+              
+              console.log(`[FILE CREATION] Creating file: ${fullFileName} (extension: ${extension})`);
+              
+              // Wait for file system initialization before creating the file
+              console.log(`[FILE CREATION] Ensuring file system initialization...`);
+              await fileSystem.ensureInitialized();
+              
+              // Create the file with appropriate extension
+              console.log(`[FILE CREATION] Creating file with: name=${fullFileName}, parentId=${parentId}, extension=${extension}`);
+              const newFile = await fileSystem.createFileAsync(fullFileName, parentId, extension);
+              console.log(`[FILE CREATION] Created file object:`, newFile);
+              
+              // Update the file content if provided
+              if (content) {
+                console.log(`[FILE CREATION] Updating file content for ${newFile.id}`);
+                await fileSystem.updateFileAsync(newFile.id, content);
+                console.log(`[FILE CREATION] Content updated successfully`);
+              }
+              
+              console.log(`[FILE CREATION] Successfully created file: ${fullFileName} (ID: ${newFile.id})`);
+              
+              // Add a system message to indicate file was created
+              const fileCreatedMessage: MCPMessage = {
+                id: (Date.now() + Math.random()).toString(),
+                type: "system",
+                content: `📁 File "${fullFileName}" has been created and is now available in your file explorer!`,
+                timestamp: new Date(),
+              };
+              setMessages((prev) => [...prev, fileCreatedMessage]);
+              
+              // Dispatch a custom event to trigger file explorer refresh
+              if (typeof window !== 'undefined') {
+                console.log(`[FILE CREATION] Dispatching fileSystemUpdate event for file: ${newFile.id}`);
+                window.dispatchEvent(new CustomEvent('fileSystemUpdate', {
+                  detail: { 
+                    action: 'create',
+                    fileId: newFile.id,
+                    fileName: fullFileName,
+                    extension: extension
+                  }
+                }));
+              }
+            }
+          } catch (parseError) {
+            console.log('[FILE CREATION] Failed to parse file creation data:', parseError);
+          }
+        }
+        
+        // Look for next occurrence
+        startIndex = response.indexOf(startDelimiter, endIndex + endDelimiter.length);
+      }
+      
+      console.log(`[FILE CREATION] Processing complete. Found ${foundCount} file creation instructions.`);
+    } catch (error) {
+      console.error('[FILE CREATION] Error handling file creation:', error);
+    }
+  };
+
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {/* Header */}
-      <div className="bg-slate-800 border-b border-slate-700 p-3 space-y-3">
+      <div className="border-b border-gray-700 p-3 space-y-3">
         {/* Title and Eliza Status */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-300">
+            <span className="text-sm font-medium text-gray-300">
               MCP + Eliza
             </span>
-            <Badge
-              variant={isElizaConnected ? "default" : "secondary"}
-              className={cn(
-                "text-xs px-2 py-0.5",
-                isElizaConnected
-                  ? "bg-green-600 text-white"
-                  : "bg-slate-600 text-slate-300"
-              )}
-            >
-              {isElizaConnected ? "Eliza Connected" : "Eliza Disconnected"}
-            </Badge>
+            {isElizaConnected && (
+              <Badge
+                variant="default"
+                className="text-xs px-2 py-0.5 bg-green-800 text-green-100"
+              >
+                Eliza Connected
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {!isElizaConnected && (
               <Button
                 onClick={handleConnectEliza}
                 size="sm"
-                className="h-7 text-xs bg-blue-600 hover:bg-blue-700"
+                className="h-7 text-xs bg-blue-800 hover:bg-blue-700"
               >
                 <PlugZap className="w-3 h-3 mr-1" />
                 Connect Eliza
@@ -546,23 +649,23 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 w-7 p-0 text-slate-400 hover:text-white hover:bg-slate-700"
+                  className="h-7 w-7 p-0 text-gray-400 hover:text-white hover:bg-gray-700"
                   onClick={handleShowTools}
                   title="Show Available MCP Tools"
                 >
                   <Wrench className="w-3 h-3" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] bg-slate-800 border-slate-700">
+              <DialogContent className="max-w-4xl max-h-[80vh] bg-slate-900 border-gray-700">
                 <DialogHeader>
-                  <DialogTitle className="text-slate-100 flex items-center gap-2">
+                  <DialogTitle className="text-gray-100 flex items-center gap-2">
                     <Wrench className="w-5 h-5" />
                     Available MCP Tools ({availableTools.length})
                   </DialogTitle>
                 </DialogHeader>
                 <ScrollArea className="max-h-[60vh] pr-4">
                   {availableTools.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400">
+                    <div className="text-center py-8 text-gray-400">
                       <Wrench className="w-12 h-12 mx-auto mb-4 opacity-50" />
                       <p>No tools available</p>
                       <p className="text-sm mt-2">
@@ -574,25 +677,25 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                       {availableTools.map((tool, index) => (
                         <div
                           key={`${tool.serverName}-${tool.name}-${index}`}
-                          className="p-4 bg-slate-700 rounded-lg border border-slate-600 hover:border-slate-500 transition-colors"
+                          className="p-4 bg-gray-800 rounded-lg border border-gray-600 hover:border-gray-500 transition-colors"
                         >
                           <div className="flex items-start justify-between mb-2">
-                            <h3 className="font-medium text-slate-100 text-sm">
+                            <h3 className="font-medium text-gray-100 text-sm">
                               {tool.name}
                             </h3>
                             <Badge
                               variant="outline"
-                              className="text-xs bg-slate-600 text-slate-300 border-slate-500"
+                              className="text-xs bg-gray-700 text-gray-300 border-gray-600"
                             >
                               {tool.serverName}
                             </Badge>
                           </div>
-                          <p className="text-xs text-slate-400 leading-relaxed">
+                          <p className="text-xs text-gray-400 leading-relaxed">
                             {tool.description}
                           </p>
                           <Button
                             size="sm"
-                            className="w-full mt-3 h-7 text-xs bg-orange-600 hover:bg-orange-700"
+                            className="w-full mt-3 h-7 text-xs bg-blue-800 hover:bg-blue-700"
                             onClick={() => {
                               // Tool usage would be implemented here
                             }}
@@ -654,7 +757,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                           server.status === "connected" &&
                             "bg-green-600/20 text-green-400 border-green-600/30",
                           server.status === "disconnected" &&
-                            "bg-slate-600/20 text-slate-400 border-slate-600/30",
+                            "bg-gray-700/20 text-gray-400 border-gray-700/30",
                           server.status === "connecting" &&
                             "bg-yellow-600/20 text-yellow-400 border-yellow-600/30",
                           server.status === "error" &&
@@ -670,7 +773,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                           onClick={() => handleDisconnectServer(server.id)}
                           size="sm"
                           variant="outline"
-                          className="h-6 w-6 p-0 border-slate-600 text-slate-400 hover:text-white hover:bg-slate-600"
+                          className="h-6 w-6 p-0 border-gray-600 text-gray-400 hover:text-white hover:bg-gray-600"
                         >
                           <X className="w-3 h-3" />
                         </Button>
@@ -705,7 +808,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
               message.type === "assistant" &&
                 "bg-green-600/20 border border-green-600/30 mr-4",
               message.type === "system" &&
-                "bg-slate-700/50 border border-slate-600/50 text-slate-300"
+                "bg-gray-800/50 border border-gray-700/50 text-gray-300"
             )}
           >
             <div className="flex items-center gap-2 mb-1">
@@ -716,23 +819,100 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                 <div className="w-2 h-2 bg-green-500 rounded-full" />
               )}
               {message.type === "system" && (
-                <div className="w-2 h-2 bg-slate-500 rounded-full" />
+                <div className="w-2 h-2 bg-gray-500 rounded-full" />
               )}
-              <span className="text-xs text-slate-400 capitalize">
+              <span className="text-xs text-gray-400 capitalize">
                 {message.type === "assistant" ? "Eliza" : message.type}
               </span>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-gray-500">
                 {message.timestamp.toLocaleTimeString()}
               </span>
             </div>
-            <div className="text-slate-100 whitespace-pre-wrap break-words overflow-wrap-anywhere">
-              {message.content}
+            <div className="text-gray-100 whitespace-pre-wrap break-words overflow-wrap-anywhere">
+              {message.type === "assistant" ? (
+                <div className="prose prose-sm prose-invert max-w-none">
+                  <ReactMarkdown
+                    components={{
+                      h1: ({ node, ...props }: any) => (
+                        <h1
+                          className="text-lg font-bold text-gray-100 mb-2"
+                          {...props}
+                        />
+                      ),
+                      h2: ({ node, ...props }: any) => (
+                        <h2
+                          className="text-base font-bold text-gray-100 mb-2"
+                          {...props}
+                        />
+                      ),
+                      h3: ({ node, ...props }: any) => (
+                        <h3
+                          className="text-sm font-bold text-gray-100 mb-1"
+                          {...props}
+                        />
+                      ),
+                      p: ({ node, ...props }: any) => (
+                        <p className="text-gray-100 mb-2 last:mb-0" {...props} />
+                      ),
+                      strong: ({ node, ...props }: any) => (
+                        <strong className="font-bold text-gray-50" {...props} />
+                      ),
+                      em: ({ node, ...props }: any) => (
+                        <em className="italic text-gray-200" {...props} />
+                      ),
+                      ul: ({ node, ...props }: any) => (
+                        <ul
+                          className="list-disc list-inside text-gray-100 mb-2 space-y-1"
+                          {...props}
+                        />
+                      ),
+                      ol: ({ node, ...props }: any) => (
+                        <ol
+                          className="list-decimal list-inside text-gray-100 mb-2 space-y-1"
+                          {...props}
+                        />
+                      ),
+                      li: ({ node, ...props }: any) => (
+                        <li className="text-gray-100" {...props} />
+                      ),
+                      code: ({ node, inline, ...props }: any) =>
+                        inline ? (
+                          <code
+                            className="bg-gray-800 text-green-300 px-1 rounded text-xs"
+                            {...props}
+                          />
+                        ) : (
+                          <code
+                            className="block bg-gray-800 text-green-300 p-2 rounded text-xs overflow-x-auto"
+                            {...props}
+                          />
+                        ),
+                      a: ({ node, ...props }: any) => (
+                        <a
+                          className="text-blue-400 hover:text-blue-300 underline"
+                          {...props}
+                        />
+                      ),
+                      blockquote: ({ node, ...props }: any) => (
+                        <blockquote
+                          className="border-l-4 border-gray-600 pl-4 text-gray-300 italic"
+                          {...props}
+                        />
+                      ),
+                    }}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                message.content
+              )}
             </div>
           </div>
         ))}
         {isLoading && (
-          <div className="flex items-center gap-2 text-xs text-slate-400 p-2">
-            <div className="w-3 h-3 border border-slate-400 border-t-transparent rounded-full animate-spin" />
+          <div className="flex items-center gap-2 text-xs text-gray-400 p-2">
+            <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
             Eliza is thinking...
           </div>
         )}
@@ -740,26 +920,26 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
 
       {/* Input Area */}
       {isElizaConnected && (
-        <div className="p-3 bg-slate-800 border-t border-slate-700">
+        <div className="p-3 bg-slate-900 border-t border-gray-700">
           <div className="space-y-2">
             {/* MCP Context Selection */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 min-w-fit">Use MCP:</span>
+              <span className="text-xs text-gray-400 min-w-fit">Use MCP:</span>
               <Select
                 value={selectedMCPContext}
                 onValueChange={setSelectedMCPContext}
               >
-                <SelectTrigger className="h-7 text-xs bg-slate-700 border-slate-600 text-slate-300">
+                <SelectTrigger className="h-7 text-xs bg-gray-800 border-gray-600 text-gray-300">
                   <SelectValue placeholder="Select MCP Server" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-700 border-slate-600">
+                <SelectContent className="bg-gray-800 border-gray-600">
                   {mcpServers
                     .filter((server) => server.status === "connected")
                     .map((server) => (
                       <SelectItem
                         key={server.id}
                         value={server.id}
-                        className="text-slate-300 hover:bg-slate-600"
+                        className="text-gray-300 hover:bg-gray-700"
                       >
                         <div className="flex items-center gap-2">
                           <Server className="w-3 h-3" />
@@ -774,7 +954,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                   onClick={() => setSelectedMCPContext("")}
                   variant="ghost"
                   size="sm"
-                  className="h-7 w-7 p-0 text-slate-400 hover:text-white"
+                  className="h-7 w-7 p-0 text-gray-400 hover:text-white"
                   title="Clear MCP selection"
                 >
                   <X className="w-3 h-3" />
@@ -797,12 +977,12 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                         })`
                       : "Type your message... (AI will auto-route to the best MCP server based on your query)"
                   }
-                  className="w-full min-h-[80px] max-h-[120px] p-3 bg-slate-700 border border-slate-600 rounded-md text-slate-100 placeholder-slate-400 focus:border-orange-500 focus:outline-none resize-none text-sm break-words overflow-wrap-anywhere word-break-break-all overflow-hidden"
+                  className="w-full min-h-[80px] max-h-[120px] p-3 bg-gray-800 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:border-blue-500 focus:outline-none resize-none text-sm break-words overflow-wrap-anywhere word-break-break-all overflow-hidden"
                   disabled={isLoading}
                   rows={3}
                 />
                 {inputMessage.trim() && (
-                  <div className="absolute bottom-2 right-2 text-xs text-slate-500">
+                  <div className="absolute bottom-2 right-2 text-xs text-gray-500">
                     {inputMessage.length} chars
                   </div>
                 )}
@@ -811,7 +991,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                 <Button
                   onClick={handleSendMessage}
                   disabled={isLoading || !inputMessage.trim()}
-                  className="bg-orange-600 hover:bg-orange-700 text-white h-[80px] px-4"
+                  className="bg-blue-800 hover:bg-blue-700 text-white h-[80px] px-4"
                   title="Send message (Enter)"
                 >
                   {isLoading ? (
@@ -829,7 +1009,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                 <Button
                   onClick={handleDisconnect}
                   variant="outline"
-                  className="h-8 w-8 p-0 border-slate-600 text-slate-400 hover:text-white hover:bg-slate-700"
+                  className="h-8 w-8 p-0 border-gray-600 text-gray-400 hover:text-white hover:bg-gray-700"
                   title="Disconnect from Eliza"
                 >
                   <AlertCircle className="w-3 h-3" />
@@ -838,17 +1018,14 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
             </div>
 
             {/* Status indicators */}
-            <div className="flex items-center justify-between text-xs text-slate-500">
+            <div className="flex items-center justify-between text-xs text-gray-500">
               <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1">
-                  <div
-                    className={cn(
-                      "w-2 h-2 rounded-full",
-                      isElizaConnected ? "bg-green-500" : "bg-red-500"
-                    )}
-                  />
-                  Eliza {isElizaConnected ? "Connected" : "Disconnected"}
-                </span>
+                {isElizaConnected && (
+                  <span className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    Eliza Connected
+                  </span>
+                )}
                 <span className="flex items-center gap-1">
                   <div
                     className={cn(
@@ -862,7 +1039,7 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
                   MCP(s) Connected
                 </span>
               </div>
-              <div className="text-slate-600">
+              <div className="text-gray-600">
                 Press Enter to send • Shift+Enter for new line
               </div>
             </div>

@@ -51,8 +51,14 @@ const nextConfig = {
       syncWebAssembly: true,
     }
     
+    // Handle RainbowKit and Wagmi modules properly
+    config.resolve.extensionAlias = {
+      '.js': ['.js', '.ts', '.tsx'],
+    }
+    
     return config
-  }
+  },
+  transpilePackages: ['@rainbow-me/rainbowkit', 'wagmi', 'viem']
 }
 
 export default nextConfig

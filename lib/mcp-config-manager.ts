@@ -663,7 +663,7 @@ export class MCPConfigManager extends EventEmitter {
     try {
       const configData = this.exportConfig();
       // In a real implementation, this would save to file system
-      // For now, we'll save to localStorage in browser environment
+      // For now, we'll save to localStorage in browser environment (config data, not files)
       if (typeof window !== "undefined") {
         localStorage.setItem("mcp-config", configData);
       }
@@ -677,7 +677,7 @@ export class MCPConfigManager extends EventEmitter {
   private async loadConfig(): Promise<void> {
     try {
       // In a real implementation, this would load from file system
-      // For now, we'll load from localStorage in browser environment
+      // For now, we'll load from localStorage in browser environment (config data, not files)
       if (typeof window !== "undefined") {
         const configData = localStorage.getItem("mcp-config");
         if (configData) {
