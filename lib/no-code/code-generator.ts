@@ -6,6 +6,7 @@ export interface GeneratedContract {
   sourceCode: string;
   abi?: any[];
   bytecode?: string;
+  metadata?: any;
   errors: string[];
   warnings: string[];
 }

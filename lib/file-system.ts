@@ -70,11 +70,6 @@ export class FileSystem {
     }
   }
 
-  private async ensureInitialized(): Promise<void> {
-    if (this.initPromise) {
-      await this.initPromise;
-    }
-  }
 
   private createDefaultFiles(): FileSystemState {
     const contractsFolder: FileNode = {
@@ -463,7 +458,7 @@ describe("HelloWorld", function () {
   }
 
   // Expose ensureInitialized for external use
-  async ensureInitialized(): Promise<void> {
+  public async ensureInitialized(): Promise<void> {
     if (this.initPromise) {
       await this.initPromise;
     }

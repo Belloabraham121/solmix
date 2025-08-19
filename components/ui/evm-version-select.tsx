@@ -53,7 +53,7 @@ export function EVMVersionSelect({
             <div className="flex flex-col gap-1">
               <span className="font-medium text-white">{version.name}</span>
               <span className="text-slate-200 text-sm">
-                {version.description}
+                EVM Version: {version.value}
               </span>
             </div>
           </SelectItem>

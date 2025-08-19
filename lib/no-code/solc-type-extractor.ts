@@ -316,6 +316,11 @@ export class SOLCTypeExtractor {
         }
       },
       settings: {
+        optimizer: {
+          enabled: false,
+          runs: 200
+        },
+        evmVersion: 'london',
         outputSelection: {
           '*': {
             '*': ['abi', 'evm.bytecode', 'metadata'],
@@ -340,12 +345,13 @@ export class SOLCTypeExtractor {
           severity: 'error',
           message: `Compilation failed: ${error}`,
           formattedMessage: `Compilation failed: ${error}`,
+          component: 'general',
           sourceLocation: {
             file: 'contract.sol',
             start: 0,
             end: 0
           },
-          type: 'CompilerError'
+          type: 'TypeError'
         }]
       };
     }

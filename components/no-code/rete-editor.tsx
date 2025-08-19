@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useCallback, forwardRef, useImperativeHandle, useState } from 'react';
-import { useNoCodeBuilder } from '@/lib/no-code/state-management';
+import { useNoCodeBuilder, useNoCodeActions } from '@/lib/no-code/state-management';
 import { cn } from '@/lib/utils';
 
 interface ReteEditorProps {
@@ -24,7 +24,8 @@ const ReteEditor = forwardRef<ReteEditorRef, ReteEditorProps>((
   ref
 ) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { editorData, setEditorData } = useNoCodeBuilder();
+  const { editorData } = useNoCodeBuilder();
+  const { setEditorData } = useNoCodeActions();
   const [nodes, setNodes] = useState<any[]>([]);
   const [draggedNode, setDraggedNode] = useState<string | null>(null);
 

@@ -1,4 +1,12 @@
-import { Plugin, IAgentRuntime } from "@elizaos/core";
+// Note: Using any types as @elizaos/core types are not fully defined
+interface Plugin {
+  name: string;
+  description: string;
+  actions: any[];
+  evaluators: any[];
+  providers: any[];
+  services: any[];
+}
 import { seiActions } from "./eliza-mcp-actions";
 import { getMCPConnectionManager } from "./mcp-connection-manager";
 
@@ -10,7 +18,7 @@ export const seiPlugin: Plugin = {
   providers: [],
   services: [
     {
-      initialize: async (runtime: IAgentRuntime): Promise<void> => {
+      initialize: async (runtime: any): Promise<void> => {
         console.log("[SEI Plugin] Initializing SEI blockchain plugin...");
         
         try {

@@ -21,7 +21,7 @@ export class SoliditySocket extends ClassicPreset.Socket {
 // Control for input fields
 export class SolidityControl extends ClassicPreset.InputControl<'text'> {
   constructor(public key: string, initial?: string, public placeholder?: string) {
-    super('text', { initial: initial || '', placeholder });
+    super('text', { initial: initial || '' });
   }
 }
 
@@ -34,7 +34,7 @@ export class UintVariableNode extends SolidityNode {
     this.addControl('value', new SolidityControl('value', '0', 'Initial value'));
     this.addControl('visibility', new SolidityControl('visibility', 'public', 'Visibility'));
     
-    this.addOutput('value', new SoliditySocket({ name: 'uint256', type: 'elementary', baseType: 'integer' }));
+    this.addOutput('value', new ClassicPreset.Output(new SoliditySocket({ name: 'uint256', type: 'elementary', baseType: 'integer' })));
   }
 }
 
@@ -46,7 +46,7 @@ export class AddressVariableNode extends SolidityNode {
     this.addControl('value', new SolidityControl('value', 'address(0)', 'Initial value'));
     this.addControl('visibility', new SolidityControl('visibility', 'public', 'Visibility'));
     
-    this.addOutput('value', new SoliditySocket({ name: 'address', type: 'elementary', baseType: 'address' }));
+    this.addOutput('value', new ClassicPreset.Output(new SoliditySocket({ name: 'address', type: 'elementary', baseType: 'address' })));
   }
 }
 
@@ -58,7 +58,7 @@ export class BoolVariableNode extends SolidityNode {
     this.addControl('value', new SolidityControl('value', 'false', 'Initial value'));
     this.addControl('visibility', new SolidityControl('visibility', 'public', 'Visibility'));
     
-    this.addOutput('value', new SoliditySocket({ name: 'bool', type: 'elementary', baseType: 'boolean' }));
+    this.addOutput('value', new ClassicPreset.Output(new SoliditySocket({ name: 'bool', type: 'elementary', baseType: 'boolean' })));
   }
 }
 
@@ -70,7 +70,7 @@ export class StringVariableNode extends SolidityNode {
     this.addControl('value', new SolidityControl('value', '""', 'Initial value'));
     this.addControl('visibility', new SolidityControl('visibility', 'public', 'Visibility'));
     
-    this.addOutput('value', new SoliditySocket({ name: 'string', type: 'elementary', baseType: 'string' }));
+    this.addOutput('value', new ClassicPreset.Output(new SoliditySocket({ name: 'string', type: 'elementary', baseType: 'string' })));
   }
 }
 
@@ -83,12 +83,12 @@ export class MappingVariableNode extends SolidityNode {
     this.addControl('valueType', new SolidityControl('valueType', 'uint256', 'Value type'));
     this.addControl('visibility', new SolidityControl('visibility', 'public', 'Visibility'));
     
-    this.addOutput('value', new SoliditySocket({ 
+    this.addOutput('value', new ClassicPreset.Output(new SoliditySocket({ 
       name: 'mapping', 
       type: 'mapping', 
       keyType: 'address', 
       valueType: 'uint256' 
-    }));
+    })));
   }
 }
 
@@ -100,8 +100,8 @@ export class ConstructorFunctionNode extends SolidityNode {
     this.addControl('parameters', new SolidityControl('parameters', '', 'Parameters (type name, ...)'));
     this.addControl('modifiers', new SolidityControl('modifiers', '', 'Modifiers'));
     
-    this.addInput('execution', new SoliditySocket({ name: 'execution', type: 'elementary' }));
-    this.addOutput('execution', new SoliditySocket({ name: 'execution', type: 'elementary' }));
+    this.addInput('execution', new ClassicPreset.Input(new SoliditySocket({ name: 'execution', type: 'elementary' })));
+    this.addOutput('execution', new ClassicPreset.Output(new SoliditySocket({ name: 'execution', type: 'elementary' })));
   }
 }
 
@@ -114,8 +114,8 @@ export class PublicFunctionNode extends SolidityNode {
     this.addControl('returns', new SolidityControl('returns', '', 'Return types'));
     this.addControl('modifiers', new SolidityControl('modifiers', '', 'Modifiers'));
     
-    this.addInput('execution', new SoliditySocket({ name: 'execution', type: 'elementary' }));
-    this.addOutput('execution', new SoliditySocket({ name: 'execution', type: 'elementary' }));
+    this.addInput('execution', new ClassicPreset.Input(new SoliditySocket({ name: 'execution', type: 'elementary' })));
+    this.addOutput('execution', new ClassicPreset.Output(new SoliditySocket({ name: 'execution', type: 'elementary' })));
   }
 }
 
@@ -128,8 +128,8 @@ export class PrivateFunctionNode extends SolidityNode {
     this.addControl('returns', new SolidityControl('returns', '', 'Return types'));
     this.addControl('modifiers', new SolidityControl('modifiers', '', 'Modifiers'));
     
-    this.addInput('execution', new SoliditySocket({ name: 'execution', type: 'elementary' }));
-    this.addOutput('execution', new SoliditySocket({ name: 'execution', type: 'elementary' }));
+    this.addInput('execution', new ClassicPreset.Input(new SoliditySocket({ name: 'execution', type: 'elementary' })));
+    this.addOutput('execution', new ClassicPreset.Output(new SoliditySocket({ name: 'execution', type: 'elementary' })));
   }
 }
 
@@ -142,8 +142,8 @@ export class ViewFunctionNode extends SolidityNode {
     this.addControl('returns', new SolidityControl('returns', '', 'Return types'));
     this.addControl('modifiers', new SolidityControl('modifiers', '', 'Modifiers'));
     
-    this.addInput('execution', new SoliditySocket({ name: 'execution', type: 'elementary' }));
-    this.addOutput('execution', new SoliditySocket({ name: 'execution', type: 'elementary' }));
+    this.addInput('execution', new ClassicPreset.Input(new SoliditySocket({ name: 'execution', type: 'elementary' })));
+    this.addOutput('execution', new ClassicPreset.Output(new SoliditySocket({ name: 'execution', type: 'elementary' })));
   }
 }
 
@@ -156,8 +156,8 @@ export class PayableFunctionNode extends SolidityNode {
     this.addControl('returns', new SolidityControl('returns', '', 'Return types'));
     this.addControl('modifiers', new SolidityControl('modifiers', '', 'Modifiers'));
     
-    this.addInput('execution', new SoliditySocket({ name: 'execution', type: 'elementary' }));
-    this.addOutput('execution', new SoliditySocket({ name: 'execution', type: 'elementary' }));
+    this.addInput('execution', new ClassicPreset.Input(new SoliditySocket({ name: 'execution', type: 'elementary' })));
+    this.addOutput('execution', new ClassicPreset.Output(new SoliditySocket({ name: 'execution', type: 'elementary' })));
   }
 }
 
@@ -169,7 +169,7 @@ export class EventNode extends SolidityNode {
     this.addControl('name', new SolidityControl('name', '', 'Event name'));
     this.addControl('parameters', new SolidityControl('parameters', '', 'Parameters (type name indexed?, ...)'));
     
-    this.addInput('trigger', new SoliditySocket({ name: 'execution', type: 'elementary' }));
+    this.addInput('trigger', new ClassicPreset.Input(new SoliditySocket({ name: 'execution', type: 'elementary' })));
   }
 }
 
@@ -185,7 +185,7 @@ export class ERC20TemplateNode extends SolidityNode {
     this.addControl('decimals', new SolidityControl('decimals', '18', 'Decimals'));
     this.addControl('totalSupply', new SolidityControl('totalSupply', '1000000', 'Total supply'));
     
-    this.addOutput('contract', new SoliditySocket({ name: 'ERC20', type: 'contract' }));
+    this.addOutput('contract', new ClassicPreset.Output(new SoliditySocket({ name: 'ERC20', type: 'contract' })));
   }
 }
 
@@ -199,7 +199,7 @@ export class ERC721TemplateNode extends SolidityNode {
     this.addControl('symbol', new SolidityControl('symbol', 'MNFT', 'NFT symbol'));
     this.addControl('baseURI', new SolidityControl('baseURI', '', 'Base URI'));
     
-    this.addOutput('contract', new SoliditySocket({ name: 'ERC721', type: 'contract' }));
+    this.addOutput('contract', new ClassicPreset.Output(new SoliditySocket({ name: 'ERC721', type: 'contract' })));
   }
 }
 

@@ -188,14 +188,16 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
     try {
       actions.setGenerating(true);
       
-      const contract = await codeGeneratorRef.current.generateContract(
-        editorData,
-        {
-          name: currentProject?.settings.contractName || 'MyContract',
-          solidityVersion: currentProject?.settings.solidityVersion || '0.8.19',
-          license: currentProject?.settings.license || 'MIT'
-        }
-      );
+      // Update generator with current settings
+      codeGeneratorRef.current.setContractName(currentProject?.settings.contractName || 'MyContract');
+      codeGeneratorRef.current.setSolcVersion(currentProject?.settings.solidityVersion || '0.8.19');
+      codeGeneratorRef.current.setLicense(currentProject?.settings.license || 'MIT');
+      
+      // Update nodes (convert editorData to nodes if needed)
+      const nodes = editorData?.nodes || [];
+      codeGeneratorRef.current.updateNodes(nodes, editorData?.connections || []);
+      
+      const contract = await codeGeneratorRef.current.generateContract();
       
       actions.setGeneratedContract(contract);
       
