@@ -1,12 +1,12 @@
 "use client";
 
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { NoCodeProject, ProjectListItem } from './project-persistence';
-import { GeneratedContract } from './code-generator';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { NoCodeProject, ProjectListItem } from "./project-persistence";
+import { GeneratedContract } from "./code-generator";
 
 // Application mode
-export type AppMode = 'code-editor' | 'no-code-builder';
+export type AppMode = "code-editor" | "no-code-builder";
 
 // No-code builder state
 export interface NoCodeBuilderState {
@@ -14,22 +14,22 @@ export interface NoCodeBuilderState {
   currentProject: NoCodeProject | null;
   isProjectLoaded: boolean;
   isProjectSaving: boolean;
-  
+
   // Editor state
   editorData: any;
   selectedNodes: string[];
   isGenerating: boolean;
   generatedContract: GeneratedContract | null;
-  
+
   // UI state
-  activeTab: 'editor' | 'code' | 'deploy';
+  activeTab: "editor" | "code" | "deploy";
   sidebarCollapsed: boolean;
   paletteCollapsed: boolean;
-  
+
   // Project management
   recentProjects: ProjectListItem[];
   projectTemplates: any[];
-  
+
   // Settings
   autoSave: boolean;
   autoGenerate: boolean;
@@ -41,30 +41,30 @@ export interface NoCodeBuilderState {
 export interface AppState {
   // Current mode
   mode: AppMode;
-  
+
   // Navigation
   previousMode: AppMode | null;
   navigationHistory: AppMode[];
-  
+
   // Cross-page data sharing
   sharedData: {
     deploymentConfig?: any;
     compiledContract?: any;
     lastGeneratedCode?: string;
   };
-  
+
   // No-code builder state
   noCodeBuilder: NoCodeBuilderState;
-  
+
   // Actions
   setMode: (mode: AppMode) => void;
   navigateToMode: (mode: AppMode) => void;
   goBack: () => void;
-  
+
   // Shared data actions
-  setSharedData: (key: keyof AppState['sharedData'], value: any) => void;
+  setSharedData: (key: keyof AppState["sharedData"], value: any) => void;
   clearSharedData: () => void;
-  
+
   // No-code builder actions
   setCurrentProject: (project: NoCodeProject | null) => void;
   setProjectLoaded: (loaded: boolean) => void;
@@ -73,7 +73,7 @@ export interface AppState {
   setSelectedNodes: (nodes: string[]) => void;
   setGenerating: (generating: boolean) => void;
   setGeneratedContract: (contract: GeneratedContract | null) => void;
-  setActiveTab: (tab: NoCodeBuilderState['activeTab']) => void;
+  setActiveTab: (tab: NoCodeBuilderState["activeTab"]) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setPaletteCollapsed: (collapsed: boolean) => void;
   setRecentProjects: (projects: ProjectListItem[]) => void;
@@ -81,10 +81,10 @@ export interface AppState {
   setAutoGenerate: (autoGenerate: boolean) => void;
   setShowMinimap: (showMinimap: boolean) => void;
   setGridSnap: (gridSnap: boolean) => void;
-  
+
   // Utility actions
   resetNoCodeBuilder: () => void;
-  updateProjectMetadata: (updates: Partial<NoCodeProject['metadata']>) => void;
+  updateProjectMetadata: (updates: Partial<NoCodeProject["metadata"]>) => void;
 }
 
 // Initial no-code builder state
@@ -96,7 +96,7 @@ const initialNoCodeBuilderState: NoCodeBuilderState = {
   selectedNodes: [],
   isGenerating: false,
   generatedContract: null,
-  activeTab: 'editor',
+  activeTab: "editor",
   sidebarCollapsed: false,
   paletteCollapsed: false,
   recentProjects: [],
@@ -104,7 +104,7 @@ const initialNoCodeBuilderState: NoCodeBuilderState = {
   autoSave: true,
   autoGenerate: true,
   showMinimap: true,
-  gridSnap: true
+  gridSnap: true,
 };
 
 // Create the main app store
@@ -112,33 +112,33 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       // Initial state
-      mode: 'code-editor',
+      mode: "code-editor",
       previousMode: null,
-      navigationHistory: ['code-editor'],
+      navigationHistory: ["code-editor"],
       sharedData: {},
       noCodeBuilder: initialNoCodeBuilderState,
-      
+
       // Navigation actions
       setMode: (mode) => {
         const currentMode = get().mode;
         set((state) => ({
           previousMode: currentMode,
           mode,
-          navigationHistory: [...state.navigationHistory, mode]
+          navigationHistory: [...state.navigationHistory, mode],
         }));
       },
-      
+
       navigateToMode: (mode) => {
         const { setMode } = get();
         setMode(mode);
-        
+
         // Navigate using Next.js router
-        if (typeof window !== 'undefined') {
-          const path = mode === 'code-editor' ? '/' : '/no-code';
-          window.history.pushState(null, '', path);
+        if (typeof window !== "undefined") {
+          const path = mode === "code-editor" ? "/" : "/no-code";
+          window.history.pushState(null, "", path);
         }
       },
-      
+
       goBack: () => {
         const { previousMode, navigationHistory } = get();
         if (previousMode) {
@@ -146,178 +146,178 @@ export const useAppStore = create<AppState>()(
           set({
             mode: previousMode,
             previousMode: newHistory[newHistory.length - 2] || null,
-            navigationHistory: newHistory
+            navigationHistory: newHistory,
           });
-          
+
           // Navigate using Next.js router
-          if (typeof window !== 'undefined') {
-            const path = previousMode === 'code-editor' ? '/' : '/no-code';
-            window.history.pushState(null, '', path);
+          if (typeof window !== "undefined") {
+            const path = previousMode === "code-editor" ? "/" : "/no-code";
+            window.history.pushState(null, "", path);
           }
         }
       },
-      
+
       // Shared data actions
       setSharedData: (key, value) => {
         set((state) => ({
           sharedData: {
             ...state.sharedData,
-            [key]: value
-          }
+            [key]: value,
+          },
         }));
       },
-      
+
       clearSharedData: () => {
         set({ sharedData: {} });
       },
-      
+
       // No-code builder actions
       setCurrentProject: (project) => {
         set((state) => ({
           noCodeBuilder: {
             ...state.noCodeBuilder,
-            currentProject: project
-          }
+            currentProject: project,
+          },
         }));
       },
-      
+
       setProjectLoaded: (loaded) => {
         set((state) => ({
           noCodeBuilder: {
             ...state.noCodeBuilder,
-            isProjectLoaded: loaded
-          }
+            isProjectLoaded: loaded,
+          },
         }));
       },
-      
+
       setProjectSaving: (saving) => {
         set((state) => ({
           noCodeBuilder: {
             ...state.noCodeBuilder,
-            isProjectSaving: saving
-          }
+            isProjectSaving: saving,
+          },
         }));
       },
-      
+
       setEditorData: (data) => {
         set((state) => ({
           noCodeBuilder: {
             ...state.noCodeBuilder,
-            editorData: data
-          }
+            editorData: data,
+          },
         }));
       },
-      
+
       setSelectedNodes: (nodes) => {
         set((state) => ({
           noCodeBuilder: {
             ...state.noCodeBuilder,
-            selectedNodes: nodes
-          }
+            selectedNodes: nodes,
+          },
         }));
       },
-      
+
       setGenerating: (generating) => {
         set((state) => ({
           noCodeBuilder: {
             ...state.noCodeBuilder,
-            isGenerating: generating
-          }
+            isGenerating: generating,
+          },
         }));
       },
-      
+
       setGeneratedContract: (contract) => {
         set((state) => ({
           noCodeBuilder: {
             ...state.noCodeBuilder,
-            generatedContract: contract
-          }
+            generatedContract: contract,
+          },
         }));
       },
-      
+
       setActiveTab: (tab) => {
         set((state) => ({
           noCodeBuilder: {
             ...state.noCodeBuilder,
-            activeTab: tab
-          }
+            activeTab: tab,
+          },
         }));
       },
-      
+
       setSidebarCollapsed: (collapsed) => {
         set((state) => ({
           noCodeBuilder: {
             ...state.noCodeBuilder,
-            sidebarCollapsed: collapsed
-          }
+            sidebarCollapsed: collapsed,
+          },
         }));
       },
-      
+
       setPaletteCollapsed: (collapsed) => {
         set((state) => ({
           noCodeBuilder: {
             ...state.noCodeBuilder,
-            paletteCollapsed: collapsed
-          }
+            paletteCollapsed: collapsed,
+          },
         }));
       },
-      
+
       setRecentProjects: (projects) => {
         set((state) => ({
           noCodeBuilder: {
             ...state.noCodeBuilder,
-            recentProjects: projects
-          }
+            recentProjects: projects,
+          },
         }));
       },
-      
+
       setAutoSave: (autoSave) => {
         set((state) => ({
           noCodeBuilder: {
             ...state.noCodeBuilder,
-            autoSave
-          }
+            autoSave,
+          },
         }));
       },
-      
+
       setAutoGenerate: (autoGenerate) => {
         set((state) => ({
           noCodeBuilder: {
             ...state.noCodeBuilder,
-            autoGenerate
-          }
+            autoGenerate,
+          },
         }));
       },
-      
+
       setShowMinimap: (showMinimap) => {
         set((state) => ({
           noCodeBuilder: {
             ...state.noCodeBuilder,
-            showMinimap
-          }
+            showMinimap,
+          },
         }));
       },
-      
+
       setGridSnap: (gridSnap) => {
         set((state) => ({
           noCodeBuilder: {
             ...state.noCodeBuilder,
-            gridSnap
-          }
+            gridSnap,
+          },
         }));
       },
-      
+
       // Utility actions
       resetNoCodeBuilder: () => {
         set((state) => ({
-          noCodeBuilder: initialNoCodeBuilderState
+          noCodeBuilder: initialNoCodeBuilderState,
         }));
       },
-      
+
       updateProjectMetadata: (updates) => {
         set((state) => {
           if (!state.noCodeBuilder.currentProject) return state;
-          
+
           return {
             noCodeBuilder: {
               ...state.noCodeBuilder,
@@ -326,16 +326,16 @@ export const useAppStore = create<AppState>()(
                 metadata: {
                   ...state.noCodeBuilder.currentProject.metadata,
                   ...updates,
-                  updated: new Date()
-                }
-              }
-            }
+                  updated: new Date(),
+                },
+              },
+            },
           };
         });
-      }
+      },
     }),
     {
-      name: 'solmix-app-state',
+      name: "solmix-app-state",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         mode: state.mode,
@@ -345,18 +345,21 @@ export const useAppStore = create<AppState>()(
           showMinimap: state.noCodeBuilder.showMinimap,
           gridSnap: state.noCodeBuilder.gridSnap,
           sidebarCollapsed: state.noCodeBuilder.sidebarCollapsed,
-          paletteCollapsed: state.noCodeBuilder.paletteCollapsed
-        }
-      })
+          paletteCollapsed: state.noCodeBuilder.paletteCollapsed,
+        },
+      }),
     }
   )
 );
 
 // Selector hooks for better performance
 export const useCurrentMode = () => useAppStore((state) => state.mode);
-export const useNoCodeBuilder = () => useAppStore((state) => state.noCodeBuilder);
-export const useCurrentProject = () => useAppStore((state) => state.noCodeBuilder.currentProject);
-export const useGeneratedContract = () => useAppStore((state) => state.noCodeBuilder.generatedContract);
+export const useNoCodeBuilder = () =>
+  useAppStore((state) => state.noCodeBuilder);
+export const useCurrentProject = () =>
+  useAppStore((state) => state.noCodeBuilder.currentProject);
+export const useGeneratedContract = () =>
+  useAppStore((state) => state.noCodeBuilder.generatedContract);
 export const useSharedData = () => useAppStore((state) => state.sharedData);
 
 // Action hooks
@@ -367,7 +370,7 @@ export const useAppActions = () => {
     navigateToMode: store.navigateToMode,
     goBack: store.goBack,
     setSharedData: store.setSharedData,
-    clearSharedData: store.clearSharedData
+    clearSharedData: store.clearSharedData,
   };
 };
 
@@ -390,32 +393,35 @@ export const useNoCodeActions = () => {
     setShowMinimap: store.setShowMinimap,
     setGridSnap: store.setGridSnap,
     resetNoCodeBuilder: store.resetNoCodeBuilder,
-    updateProjectMetadata: store.updateProjectMetadata
+    updateProjectMetadata: store.updateProjectMetadata,
   };
 };
 
 // Navigation utilities
 export const getNavigationPath = (mode: AppMode): string => {
-  return mode === 'code-editor' ? '/' : '/no-code';
+  return mode === "code-editor" ? "/" : "/no-code";
 };
 
 export const getCurrentModeFromPath = (pathname: string): AppMode => {
-  return pathname.startsWith('/no-code') ? 'no-code-builder' : 'code-editor';
+  return pathname.startsWith("/no-code") ? "no-code-builder" : "code-editor";
 };
 
 // Auto-save functionality
 let autoSaveTimeout: NodeJS.Timeout | null = null;
 
-export const scheduleAutoSave = (callback: () => Promise<void>, delay: number = 5000) => {
+export const scheduleAutoSave = (
+  callback: () => Promise<void>,
+  delay: number = 5000
+) => {
   if (autoSaveTimeout) {
     clearTimeout(autoSaveTimeout);
   }
-  
+
   autoSaveTimeout = setTimeout(async () => {
     try {
       await callback();
     } catch (error) {
-      console.error('Auto-save failed:', error);
+      console.error("Auto-save failed:", error);
     }
   }, delay);
 };
@@ -430,17 +436,17 @@ export const cancelAutoSave = () => {
 // Integration with existing SolMix deployment
 export const prepareForDeployment = (contract: GeneratedContract) => {
   const { setSharedData } = useAppStore.getState();
-  
+
   // Share contract data with the main IDE
-  setSharedData('compiledContract', {
+  setSharedData("compiledContract", {
     sourceCode: contract.sourceCode,
     abi: contract.abi,
     bytecode: contract.bytecode,
     name: contract.name,
-    metadata: contract.metadata
+    metadata: contract.metadata,
   });
-  
-  setSharedData('lastGeneratedCode', contract.sourceCode);
+
+  setSharedData("lastGeneratedCode", contract.sourceCode);
 };
 
 export default useAppStore;

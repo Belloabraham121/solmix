@@ -67,7 +67,7 @@ const buildingBlocks: BuildingBlock[] = [
     category: "State Variables",
     nodeType: "mapping-variable",
   },
-  
+
   // Functions
   {
     id: "constructor-function",
@@ -109,7 +109,7 @@ const buildingBlocks: BuildingBlock[] = [
     category: "Functions",
     nodeType: "payable-function",
   },
-  
+
   // Events
   {
     id: "event",
@@ -119,7 +119,7 @@ const buildingBlocks: BuildingBlock[] = [
     category: "Events",
     nodeType: "event",
   },
-  
+
   // Templates
   {
     id: "erc20-template",
@@ -139,12 +139,7 @@ const buildingBlocks: BuildingBlock[] = [
   },
 ];
 
-const categories = [
-  "State Variables",
-  "Functions",
-  "Events",
-  "Templates",
-];
+const categories = ["State Variables", "Functions", "Events", "Templates"];
 
 export default function BuildingBlocksPalette() {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([
@@ -161,7 +156,10 @@ export default function BuildingBlocksPalette() {
   };
 
   const handleDragStart = (e: React.DragEvent, block: BuildingBlock) => {
+    // Set multiple data formats for better compatibility
     e.dataTransfer.setData("application/json", JSON.stringify(block));
+    e.dataTransfer.setData("application/node-type", block.nodeType);
+    e.dataTransfer.setData("text/plain", block.name);
     e.dataTransfer.effectAllowed = "copy";
   };
 
@@ -171,9 +169,7 @@ export default function BuildingBlocksPalette() {
         <h3 className="text-sm font-semibold text-white mb-2">
           Building Blocks
         </h3>
-        <p className="text-xs text-gray-400">
-          Drag components to the editor
-        </p>
+        <p className="text-xs text-gray-400">Drag components to the editor</p>
       </div>
 
       <ScrollArea className="flex-1">
