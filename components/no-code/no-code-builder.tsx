@@ -15,16 +15,22 @@ import {
   Plus,
   FileText,
   Loader2,
-  Focus
+  Focus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import BuildingBlocksPalette from "./building-blocks-palette";
 import ReteEditor, { ReteEditorRef } from "./rete-editor";
 import CodePreview from "./code-preview";
-import { useNoCodeBuilder, useNoCodeActions } from "@/lib/no-code/state-management";
+import {
+  useNoCodeBuilder,
+  useNoCodeActions,
+} from "@/lib/no-code/state-management";
 import { projectPersistence } from "@/lib/no-code/project-persistence";
 import { SolidityCodeGenerator } from "@/lib/no-code/code-generator";
-import { scheduleAutoSave, cancelAutoSave } from "@/lib/no-code/state-management";
+import {
+  scheduleAutoSave,
+  cancelAutoSave,
+} from "@/lib/no-code/state-management";
 
 interface NoCodeBuilderProps {
   className?: string;
@@ -35,7 +41,7 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
   const actions = useNoCodeActions();
   const codeGeneratorRef = useRef<SolidityCodeGenerator | null>(null);
   const reteEditorRef = useRef<ReteEditorRef>(null);
-  
+
   const {
     currentProject,
     isProjectLoaded,
@@ -45,7 +51,7 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
     generatedContract,
     activeTab,
     autoSave,
-    autoGenerate
+    autoGenerate,
   } = noCodeState;
 
   // Initialize code generator
@@ -62,7 +68,7 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
         await handleSave(false); // Silent save
       });
     }
-    
+
     return () => cancelAutoSave();
   }, [editorData, autoSave, currentProject]);
 
@@ -85,8 +91,8 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
           actions.setCurrentProject(newProject);
           actions.setProjectLoaded(true);
         } catch (error) {
-          console.error('Failed to create initial project:', error);
-          toast.error('Failed to initialize project');
+          console.error("Failed to create initial project:", error);
+          toast.error("Failed to initialize project");
         }
       }
     };
@@ -94,31 +100,34 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
     initializeProject();
   }, []);
 
-  const handleSave = useCallback(async (showToast = true) => {
-    if (!currentProject) return;
-    
-    try {
-      actions.setProjectSaving(true);
-      
-      const updatedProject = {
-        ...currentProject,
-        editorData: editorData || currentProject.editorData,
-        generatedContract: generatedContract || undefined
-      };
-      
-      await projectPersistence.saveProject(updatedProject);
-      actions.setCurrentProject(updatedProject);
-      
-      if (showToast) {
-        toast.success('Project saved successfully');
+  const handleSave = useCallback(
+    async (showToast = true) => {
+      if (!currentProject) return;
+
+      try {
+        actions.setProjectSaving(true);
+
+        const updatedProject = {
+          ...currentProject,
+          editorData: editorData || currentProject.editorData,
+          generatedContract: generatedContract || undefined,
+        };
+
+        await projectPersistence.saveProject(updatedProject);
+        actions.setCurrentProject(updatedProject);
+
+        if (showToast) {
+          toast.success("Project saved successfully");
+        }
+      } catch (error) {
+        console.error("Failed to save project:", error);
+        toast.error("Failed to save project");
+      } finally {
+        actions.setProjectSaving(false);
       }
-    } catch (error) {
-      console.error('Failed to save project:', error);
-      toast.error('Failed to save project');
-    } finally {
-      actions.setProjectSaving(false);
-    }
-  }, [currentProject, editorData, generatedContract, actions]);
+    },
+    [currentProject, editorData, generatedContract, actions]
+  );
 
   const handleLoad = useCallback(async () => {
     try {
@@ -130,89 +139,102 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
           actions.setCurrentProject(project);
           actions.setEditorData(project.editorData);
           actions.setGeneratedContract(project.generatedContract || null);
-          toast.success('Project loaded successfully');
+          toast.success("Project loaded successfully");
         }
       } else {
-        toast.info('No projects found');
+        toast.info("No projects found");
       }
     } catch (error) {
-      console.error('Failed to load project:', error);
-      toast.error('Failed to load project');
+      console.error("Failed to load project:", error);
+      toast.error("Failed to load project");
     }
   }, [actions]);
 
   const handleExport = useCallback(async () => {
     if (!currentProject) return;
-    
+
     try {
-      const exportData = await projectPersistence.exportProject(currentProject.id);
-      
-      const blob = new Blob([exportData], { type: 'application/json' });
+      const exportData = await projectPersistence.exportProject(
+        currentProject.id
+      );
+
+      const blob = new Blob([exportData], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = `${currentProject.name}.solmix`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
-      toast.success('Project exported successfully');
+
+      toast.success("Project exported successfully");
     } catch (error) {
-      console.error('Failed to export project:', error);
-      toast.error('Failed to export project');
+      console.error("Failed to export project:", error);
+      toast.error("Failed to export project");
     }
   }, [currentProject]);
 
   const handleDeploy = useCallback(async () => {
     if (!generatedContract) {
-      toast.error('No contract to deploy. Generate code first.');
+      toast.error("No contract to deploy. Generate code first.");
       return;
     }
-    
+
     if (generatedContract.errors.length > 0) {
-      toast.error('Cannot deploy contract with errors');
+      toast.error("Cannot deploy contract with errors");
       return;
     }
-    
+
     try {
       // TODO: Integrate with existing SolMix deployment system
-      toast.info('Deployment integration coming soon');
+      toast.info("Deployment integration coming soon");
     } catch (error) {
-      console.error('Failed to deploy contract:', error);
-      toast.error('Failed to deploy contract');
+      console.error("Failed to deploy contract:", error);
+      toast.error("Failed to deploy contract");
     }
   }, [generatedContract]);
 
   const handleGenerateCode = useCallback(async () => {
     if (!editorData || !codeGeneratorRef.current) return;
-    
+
     try {
       actions.setGenerating(true);
-      
+
       // Update generator with current settings
-      codeGeneratorRef.current.setContractName(currentProject?.settings.contractName || 'MyContract');
-      codeGeneratorRef.current.setSolcVersion(currentProject?.settings.solidityVersion || '0.8.19');
-      codeGeneratorRef.current.setLicense(currentProject?.settings.license || 'MIT');
-      
+      codeGeneratorRef.current.setContractName(
+        currentProject?.settings.contractName || "MyContract"
+      );
+      codeGeneratorRef.current.setSolcVersion(
+        currentProject?.settings.solidityVersion || "0.8.19"
+      );
+      codeGeneratorRef.current.setLicense(
+        currentProject?.settings.license || "MIT"
+      );
+
       // Update nodes (convert editorData to nodes if needed)
       const nodes = editorData?.nodes || [];
-      codeGeneratorRef.current.updateNodes(nodes, editorData?.connections || []);
-      
+      codeGeneratorRef.current.updateNodes(
+        nodes,
+        editorData?.connections || []
+      );
+
       const contract = await codeGeneratorRef.current.generateContract();
-      
+
       actions.setGeneratedContract(contract);
-      
+
       if (contract.errors.length > 0) {
         toast.error(`Generated code has ${contract.errors.length} error(s)`);
       } else if (contract.warnings.length > 0) {
-        toast.warning(`Generated code has ${contract.warnings.length} warning(s)`);
+        toast.warning(
+          `Generated code has ${contract.warnings.length} warning(s)`
+        );
       } else {
-        toast.success('Code generated successfully');
+        toast.success("Code generated successfully");
       }
     } catch (error) {
-      console.error('Failed to generate code:', error);
-      toast.error('Failed to generate code');
+      console.error("Failed to generate code:", error);
+      toast.error("Failed to generate code");
     } finally {
       actions.setGenerating(false);
     }
@@ -221,28 +243,34 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
   const handleFitToView = useCallback(() => {
     if (reteEditorRef.current) {
       reteEditorRef.current.fitToView();
-      toast.success('Centered view on nodes');
+      toast.success("Centered view on nodes");
     }
   }, []);
 
-  const handleEditorChange = useCallback((data: any) => {
-    actions.setEditorData(data);
-  }, [actions]);
+  const handleEditorChange = useCallback(
+    (data: any) => {
+      actions.setEditorData(data);
+    },
+    [actions]
+  );
 
-  const handleProjectNameChange = useCallback((name: string) => {
-    if (!currentProject) return;
-    
-    const updatedProject = {
-      ...currentProject,
-      name,
-      settings: {
-        ...currentProject.settings,
-        contractName: name.replace(/\s+/g, '')
-      }
-    };
-    
-    actions.setCurrentProject(updatedProject);
-  }, [currentProject, actions]);
+  const handleProjectNameChange = useCallback(
+    (name: string) => {
+      if (!currentProject) return;
+
+      const updatedProject = {
+        ...currentProject,
+        name,
+        settings: {
+          ...currentProject.settings,
+          contractName: name.replace(/\s+/g, ""),
+        },
+      };
+
+      actions.setCurrentProject(updatedProject);
+    },
+    [currentProject, actions]
+  );
 
   return (
     <div className={cn("h-full flex flex-col bg-black", className)}>
@@ -261,7 +289,7 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
               <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
             )}
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -310,7 +338,9 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
               variant="default"
               size="sm"
               onClick={handleDeploy}
-              disabled={!generatedContract || generatedContract.errors.length > 0}
+              disabled={
+                !generatedContract || generatedContract.errors.length > 0
+              }
               className="bg-blue-600 hover:bg-blue-700"
             >
               <Rocket className="w-4 h-4 mr-2" />
@@ -329,24 +359,32 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
 
         {/* Editor Area */}
         <div className="flex-1 flex flex-col">
-          <Tabs 
-            value={activeTab} 
-            onValueChange={(value) => actions.setActiveTab(value as "editor" | "code" | "deploy")} 
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) =>
+              actions.setActiveTab(value as "editor" | "code" | "deploy")
+            }
             className="h-full flex flex-col"
           >
             <div className="p-3 border-b border-gray-700">
               <TabsList className="bg-gray-800">
-                <TabsTrigger value="editor" className="text-gray-300 data-[state=active]:text-white">
+                <TabsTrigger
+                  value="editor"
+                  className="text-gray-300 data-[state=active]:text-white"
+                >
                   <Settings className="w-4 h-4 mr-2" />
                   Visual Editor
                 </TabsTrigger>
-                <TabsTrigger value="code" className="text-gray-300 data-[state=active]:text-white">
+                <TabsTrigger
+                  value="code"
+                  className="text-gray-300 data-[state=active]:text-white"
+                >
                   <FileText className="w-4 h-4 mr-2" />
                   Generated Code
                 </TabsTrigger>
               </TabsList>
             </div>
-            
+
             <TabsContent value="editor" className="flex-1 m-0 p-0">
               <ReteEditor
                 ref={reteEditorRef}
@@ -355,13 +393,13 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
                 className="h-full"
               />
             </TabsContent>
-            
+
             <TabsContent value="code" className="flex-1 m-0 p-0">
               <CodePreview
                 contract={generatedContract}
                 isGenerating={isGenerating}
-                onCopy={() => toast.success('Code copied to clipboard')}
-                onDownload={() => toast.success('Code downloaded')}
+                onCopy={() => toast.success("Code copied to clipboard")}
+                onDownload={() => toast.success("Code downloaded")}
                 onDeploy={handleDeploy}
                 className="h-full"
               />
