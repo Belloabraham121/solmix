@@ -36,6 +36,7 @@ export interface ReteEditorRef {
   addNode: (type: string, position?: { x: number; y: number }) => void;
   clearEditor: () => void;
   arrangeNodes: () => void;
+  fitToView: () => void;
   exportData: () => any;
 }
 
@@ -299,6 +300,15 @@ const ReteEditor = forwardRef<ReteEditorRef, ReteEditorProps>(
             await areaRef.current.translate(nodes[i].id, { x, y });
           }
         },
+        fitToView: async () => {
+          if (!areaRef.current || !editorRef.current) return;
+
+          const nodes = Array.from(editorRef.current.getNodes());
+          if (nodes.length === 0) return;
+
+          // Use AreaExtensions.zoomAt to fit all nodes in view
+          await AreaExtensions.zoomAt(areaRef.current, nodes);
+        },
         exportData: () => {
           if (!editorRef.current) return { nodes: [], connections: [] };
 
@@ -328,7 +338,7 @@ const ReteEditor = forwardRef<ReteEditorRef, ReteEditorProps>(
       <div
         ref={containerRef}
         className={cn(
-          "w-full h-full bg-gray-50 relative overflow-hidden",
+          "w-full h-full bg-transparent relative overflow-hidden",
           className
         )}
         onDrop={handleDrop}
@@ -339,9 +349,9 @@ const ReteEditor = forwardRef<ReteEditorRef, ReteEditorProps>(
       >
         {/* Drop zone indicator */}
         {draggedNode && (
-          <div className="absolute inset-0 bg-blue-50 bg-opacity-50 flex items-center justify-center z-50 pointer-events-none">
-            <div className="bg-white p-4 rounded-lg shadow-lg border-2 border-blue-300">
-              <p className="text-blue-600 font-medium">
+          <div className="absolute inset-0 bg-blue-500 bg-opacity-20 flex items-center justify-center z-50 pointer-events-none">
+            <div className="bg-black bg-opacity-80 p-4 rounded-lg shadow-lg border-2 border-blue-400">
+              <p className="text-blue-300 font-medium">
                 Drop to add {draggedNode} node
               </p>
             </div>

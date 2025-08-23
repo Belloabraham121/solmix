@@ -14,11 +14,12 @@ import {
   Settings,
   Plus,
   FileText,
-  Loader2
+  Loader2,
+  Focus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import BuildingBlocksPalette from "./building-blocks-palette";
-import ReteEditor from "./rete-editor";
+import ReteEditor, { ReteEditorRef } from "./rete-editor";
 import CodePreview from "./code-preview";
 import { useNoCodeBuilder, useNoCodeActions } from "@/lib/no-code/state-management";
 import { projectPersistence } from "@/lib/no-code/project-persistence";
@@ -33,6 +34,7 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
   const noCodeState = useNoCodeBuilder();
   const actions = useNoCodeActions();
   const codeGeneratorRef = useRef<SolidityCodeGenerator | null>(null);
+  const reteEditorRef = useRef<ReteEditorRef>(null);
   
   const {
     currentProject,
@@ -216,6 +218,13 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
     }
   }, [editorData, currentProject, actions]);
 
+  const handleFitToView = useCallback(() => {
+    if (reteEditorRef.current) {
+      reteEditorRef.current.fitToView();
+      toast.success('Centered view on nodes');
+    }
+  }, []);
+
   const handleEditorChange = useCallback((data: any) => {
     actions.setEditorData(data);
   }, [actions]);
@@ -287,6 +296,15 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleFitToView}
+              className="border-gray-600 text-gray-300 hover:text-white"
+            >
+              <Focus className="w-4 h-4 mr-2" />
+              Fit to View
+            </Button>
             <Separator orientation="vertical" className="h-6 bg-gray-600" />
             <Button
               variant="default"
@@ -331,6 +349,7 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
             
             <TabsContent value="editor" className="flex-1 m-0 p-0">
               <ReteEditor
+                ref={reteEditorRef}
                 onEditorChange={handleEditorChange}
                 initialData={editorData}
                 className="h-full"
