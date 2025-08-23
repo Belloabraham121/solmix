@@ -339,13 +339,145 @@ export class SolidityCodeGenerator {
         functions.push(
           `    function ${name}(${parameters}) ${visibility}${mutabilityStr}${modifierStr}${returnStr} {`
         );
-        functions.push("        // TODO: Implement function logic");
+        
+        // Generate function body from connected logic nodes
+        const functionBody = this.generateFunctionBody(node);
+        if (functionBody.length > 0) {
+          functions.push(...functionBody);
+        } else {
+          functions.push("        // TODO: Implement function logic");
+        }
+        
         functions.push("    }");
         functions.push("");
       }
     }
 
     return functions;
+  }
+
+  private generateFunctionBody(functionNode: SolidityNode): string[] {
+    const body: string[] = [];
+    
+    // Find the entry point of the function (connected to execution input)
+    const entryConnection = this.connections.find(
+      conn => conn.target === functionNode.id && conn.targetInput === "execution"
+    );
+    
+    if (!entryConnection) {
+      return body; // No logic connected
+    }
+    
+    // Traverse the execution flow starting from the entry point
+    const visited = new Set<string>();
+    this.generateLogicFromNode(entryConnection.source, entryConnection.sourceOutput, body, visited, 2);
+    
+    return body;
+  }
+  
+  private generateLogicFromNode(nodeId: string, outputKey: string, body: string[], visited: Set<string>, indentLevel: number): void {
+    if (visited.has(nodeId)) return;
+    visited.add(nodeId);
+    
+    const node = this.nodes.find(n => n.id === nodeId);
+    if (!node) return;
+    
+    const indent = "    ".repeat(indentLevel);
+    
+    switch (node.label) {
+      case "If Statement":
+        const condition = this.generateExpression(node, "condition");
+        body.push(`${indent}if (${condition}) {`);
+        
+        // Generate true branch
+        const trueConnection = this.connections.find(
+          conn => conn.source === nodeId && conn.sourceOutput === "exec_true"
+        );
+        if (trueConnection) {
+          this.generateLogicFromNode(trueConnection.target, trueConnection.targetInput, body, visited, indentLevel + 1);
+        }
+        
+        // Check for false branch
+        const falseConnection = this.connections.find(
+          conn => conn.source === nodeId && conn.sourceOutput === "exec_false"
+        );
+        if (falseConnection) {
+          body.push(`${indent}} else {`);
+          this.generateLogicFromNode(falseConnection.target, falseConnection.targetInput, body, visited, indentLevel + 1);
+        }
+        
+        body.push(`${indent}}`);
+        
+        // Continue with next execution
+        const nextConnection = this.connections.find(
+          conn => conn.source === nodeId && conn.sourceOutput === "exec_out"
+        );
+        if (nextConnection) {
+          this.generateLogicFromNode(nextConnection.target, nextConnection.targetInput, body, visited, indentLevel);
+        }
+        break;
+        
+      case "Assignment":
+        const variable = this.getControlValue(node, "variable");
+        const value = this.generateExpression(node, "value");
+        body.push(`${indent}${variable} = ${value};`);
+        
+        // Continue with next execution
+        const assignNextConnection = this.connections.find(
+          conn => conn.source === nodeId && conn.sourceOutput === "exec_out"
+        );
+        if (assignNextConnection) {
+          this.generateLogicFromNode(assignNextConnection.target, assignNextConnection.targetInput, body, visited, indentLevel);
+        }
+        break;
+    }
+  }
+  
+  private generateExpression(node: SolidityNode, inputKey: string): string {
+    const connection = this.connections.find(
+      conn => conn.target === node.id && conn.targetInput === inputKey
+    );
+    
+    if (!connection) {
+      return "true"; // Default fallback
+    }
+    
+    const sourceNode = this.nodes.find(n => n.id === connection.source);
+    if (!sourceNode) return "true";
+    
+    switch (sourceNode.label) {
+      case "Comparison":
+        const operator = this.getControlValue(sourceNode, "operator");
+        const left = this.generateExpression(sourceNode, "left");
+        const right = this.generateExpression(sourceNode, "right");
+        return `${left} ${operator} ${right}`;
+        
+      case "Math Operation":
+        const mathOp = this.getControlValue(sourceNode, "operator");
+        const mathLeft = this.generateExpression(sourceNode, "left");
+        const mathRight = this.generateExpression(sourceNode, "right");
+        return `${mathLeft} ${mathOp} ${mathRight}`;
+        
+      case "Logical Operation":
+        const logicalOp = this.getControlValue(sourceNode, "operator");
+        const logicalLeft = this.generateExpression(sourceNode, "left");
+        const logicalRight = this.generateExpression(sourceNode, "right");
+        return `${logicalLeft} ${logicalOp} ${logicalRight}`;
+        
+      case "Variable Reference":
+        return this.getControlValue(sourceNode, "variable");
+        
+      case "Literal Value":
+        const value = this.getControlValue(sourceNode, "value");
+        const type = this.getControlValue(sourceNode, "type");
+        if (type === "string") {
+          return `"${value}"`;
+        }
+        return value;
+        
+      default:
+        return "true";
+    }
   }
 
   private generateTemplateImplementations(): string[] {

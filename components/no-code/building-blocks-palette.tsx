@@ -13,6 +13,12 @@ import {
   ChevronDown,
   ChevronRight,
   Plus,
+  GitBranch,
+  Calculator,
+  Equal,
+  Hash,
+  Type,
+  Binary,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -137,9 +143,67 @@ const buildingBlocks: BuildingBlock[] = [
     category: "Templates",
     nodeType: "erc721-template",
   },
+
+  // Logic Nodes
+  {
+    id: "if-statement",
+    name: "If Statement",
+    description: "Conditional logic branching",
+    icon: <GitBranch className="w-4 h-4" />,
+    category: "Logic",
+    nodeType: "if-statement",
+  },
+  {
+    id: "comparison",
+    name: "Comparison",
+    description: "Compare two values (>, <, ==, etc.)",
+    icon: <Equal className="w-4 h-4" />,
+    category: "Logic",
+    nodeType: "comparison",
+  },
+  {
+    id: "assignment",
+    name: "Assignment",
+    description: "Assign value to variable",
+    icon: <Type className="w-4 h-4" />,
+    category: "Logic",
+    nodeType: "assignment",
+  },
+  {
+    id: "variable-reference",
+    name: "Variable Reference",
+    description: "Reference to existing variable",
+    icon: <Variable className="w-4 h-4" />,
+    category: "Logic",
+    nodeType: "variable-reference",
+  },
+  {
+    id: "math-operation",
+    name: "Math Operation",
+    description: "Mathematical operations (+, -, *, /, %)",
+    icon: <Calculator className="w-4 h-4" />,
+    category: "Logic",
+    nodeType: "math-operation",
+  },
+  {
+    id: "literal-value",
+    name: "Literal Value",
+    description: "Constant value (number, string, bool)",
+    icon: <Hash className="w-4 h-4" />,
+    category: "Logic",
+    nodeType: "literal-value",
+  },
+  {
+    id: "logical-operation",
+    name: "Logical Operation",
+    description: "Logical operations (&&, ||, !)",
+    icon: <Binary className="w-4 h-4" />,
+    category: "Logic",
+    nodeType: "logical-operation",
+  },
 ];
 
-const categories = ["State Variables", "Functions", "Events", "Templates"];
+const categories = ["State Variables", "Functions", "Events", "Templates", "Logic"];
 
 export default function BuildingBlocksPalette() {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([

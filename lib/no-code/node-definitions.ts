@@ -25,6 +25,27 @@ export class UniversalSocket extends ClassicPreset.Socket {
   }
 }
 
+// Execution flow socket for connecting logic nodes
+export class ExecutionSocket extends ClassicPreset.Socket {
+  constructor() {
+    super("execution");
+  }
+}
+
+// Boolean socket for boolean values and conditions
+export class BooleanSocket extends ClassicPreset.Socket {
+  constructor() {
+    super("boolean");
+  }
+}
+
+// Value socket for numeric and string values
+export class ValueSocket extends ClassicPreset.Socket {
+  constructor() {
+    super("value");
+  }
+}
+
 // Control for input fields
 export class SolidityControl extends ClassicPreset.InputControl<"text"> {
   constructor(
@@ -198,15 +219,11 @@ export class ConstructorFunctionNode extends SolidityNode {
 
     this.addInput(
       "execution",
-      new ClassicPreset.Input(
-        new SoliditySocket({ name: "execution", type: "elementary" })
-      )
+      new ClassicPreset.Input(new ExecutionSocket())
     );
     this.addOutput(
       "execution",
-      new ClassicPreset.Output(
-        new SoliditySocket({ name: "execution", type: "elementary" })
-      )
+      new ClassicPreset.Output(new ExecutionSocket())
     );
   }
 }
@@ -442,6 +459,113 @@ export class ERC721TemplateNode extends SolidityNode {
   }
 }
 
+// Logic Nodes for Function Bodies
+
+// If Statement Node
+export class IfStatementNode extends SolidityNode {
+  constructor() {
+    super("If Statement");
+
+    // Execution flow
+    this.addInput("exec_in", new ClassicPreset.Input(new ExecutionSocket()));
+    this.addOutput("exec_true", new ClassicPreset.Output(new ExecutionSocket()));
+    this.addOutput("exec_false", new ClassicPreset.Output(new ExecutionSocket()));
+    this.addOutput("exec_out", new ClassicPreset.Output(new ExecutionSocket()));
+
+    // Condition input
+    this.addInput("condition", new ClassicPreset.Input(new BooleanSocket()));
+  }
+}
+
+// Comparison Node
+export class ComparisonNode extends SolidityNode {
+  constructor() {
+    super("Comparison");
+
+    this.addControl("operator", new SolidityControl("operator", ">", "Operator (>, <, ==, !=, >=, <=)"));
+
+    // Value inputs
+    this.addInput("left", new ClassicPreset.Input(new ValueSocket()));
+    this.addInput("right", new ClassicPreset.Input(new ValueSocket()));
+
+    // Boolean output
+    this.addOutput("result", new ClassicPreset.Output(new BooleanSocket()));
+  }
+}
+
+// Assignment Node
+export class AssignmentNode extends SolidityNode {
+  constructor() {
+    super("Assignment");
+
+    this.addControl("variable", new SolidityControl("variable", "", "Variable name"));
+
+    // Execution flow
+    this.addInput("exec_in", new ClassicPreset.Input(new ExecutionSocket()));
+    this.addOutput("exec_out", new ClassicPreset.Output(new ExecutionSocket()));
+
+    // Value input
+    this.addInput("value", new ClassicPreset.Input(new ValueSocket()));
+  }
+}
+
+// Variable Reference Node
+export class VariableReferenceNode extends SolidityNode {
+  constructor() {
+    super("Variable Reference");
+
+    this.addControl("variable", new SolidityControl("variable", "", "Variable name"));
+
+    // Value output
+    this.addOutput("value", new ClassicPreset.Output(new ValueSocket()));
+  }
+}
+
+// Math Operation Node
+export class MathOperationNode extends SolidityNode {
+  constructor() {
+    super("Math Operation");
+
+    this.addControl("operator", new SolidityControl("operator", "+", "Operator (+, -, *, /, %)"));
+
+    // Value inputs
+    this.addInput("left", new ClassicPreset.Input(new ValueSocket()));
+    this.addInput("right", new ClassicPreset.Input(new ValueSocket()));
+
+    // Value output
+    this.addOutput("result", new ClassicPreset.Output(new ValueSocket()));
+  }
+}
+
+// Literal Value Node
+export class LiteralValueNode extends SolidityNode {
+  constructor() {
+    super("Literal Value");
+
+    this.addControl("value", new SolidityControl("value", "0", "Value"));
+    this.addControl("type", new SolidityControl("type", "uint256", "Type (uint256, string, bool)"));
+
+    // Value output
+    this.addOutput("value", new ClassicPreset.Output(new ValueSocket()));
+  }
+}
+
+// Logical Operation Node
+export class LogicalOperationNode extends SolidityNode {
+  constructor() {
+    super("Logical Operation");
+
+    this.addControl("operator", new SolidityControl("operator", "&&", "Operator (&&, ||, !)"));
+
+    // Boolean inputs
+    this.addInput("left", new ClassicPreset.Input(new BooleanSocket()));
+    this.addInput("right", new ClassicPreset.Input(new BooleanSocket()));
+
+    // Boolean output
+    this.addOutput("result", new ClassicPreset.Output(new BooleanSocket()));
+  }
+}
+
 // Node factory function
 export function createNode(nodeType: string): SolidityNode | null {
   switch (nodeType) {
@@ -479,6 +603,22 @@ export function createNode(nodeType: string): SolidityNode | null {
     case "erc721-template":
       return new ERC721TemplateNode();
 
+    // Logic Nodes
+    case "if-statement":
+      return new IfStatementNode();
+    case "comparison":
+      return new ComparisonNode();
+    case "assignment":
+      return new AssignmentNode();
+    case "variable-reference":
+      return new VariableReferenceNode();
+    case "math-operation":
+      return new MathOperationNode();
+    case "literal-value":
+      return new LiteralValueNode();
+    case "logical-operation":
+      return new LogicalOperationNode();
+
     default:
       return null;
   }
@@ -500,5 +640,12 @@ export function getAvailableNodeTypes(): string[] {
     "event",
     "erc20-template",
     "erc721-template",
+    "if-statement",
+    "comparison",
+    "assignment",
+    "variable-reference",
+    "math-operation",
+    "literal-value",
+    "logical-operation",
   ];
 }
