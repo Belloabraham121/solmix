@@ -154,7 +154,7 @@ export function SolidityNodeComponent({ data, emit }: SolidityNodeProps) {
                       value={controlData.value || "public"}
                       onValueChange={(value) => handleControlChange(key, value)}
                     >
-                      <SelectTrigger className="h-8 text-xs bg-white text-black border-gray-300">
+                      <SelectTrigger className="h-8 text-xs !bg-white !text-black border-gray-300">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -179,7 +179,7 @@ export function SolidityNodeComponent({ data, emit }: SolidityNodeProps) {
                         value={controlData.value || ""}
                         onChange={(e) => handleControlChange(key, e.target.value)}
                         placeholder="uint256 amount, address to"
-                        className="h-8 text-xs bg-white text-black border-gray-300"
+                        className="h-8 text-xs !bg-white !text-black border-gray-300"
                       />
                     <p className="text-xs text-gray-400">
                       Format: type name, type name
@@ -199,7 +199,7 @@ export function SolidityNodeComponent({ data, emit }: SolidityNodeProps) {
                         value={controlData.value || ""}
                         onChange={(e) => handleControlChange(key, e.target.value)}
                         placeholder="uint256, bool"
-                        className="h-8 text-xs bg-white text-black border-gray-300"
+                        className="h-8 text-xs !bg-white !text-black border-gray-300"
                       />
                     <p className="text-xs text-gray-400">
                       Return types separated by commas
@@ -218,7 +218,7 @@ export function SolidityNodeComponent({ data, emit }: SolidityNodeProps) {
                       value={controlData.value || ""}
                       onChange={(e) => handleControlChange(key, e.target.value)}
                       placeholder={`Enter ${key}`}
-                      className="h-8 text-xs bg-white text-black border-gray-300"
+                      className="h-8 text-xs !bg-white !text-black border-gray-300"
                     />
                 </div>
               );
