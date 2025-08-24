@@ -116,6 +116,47 @@ const ReteEditor = forwardRef<ReteEditorRef, ReteEditorProps>(
 
       // Configure connections
       connection.addPreset(ConnectionPresets.classic.setup());
+      
+      // Override connection validation after preset is added
+      const originalCanMakeConnection = (connection as any).canMakeConnection;
+      (connection as any).canMakeConnection = (from: any, to: any) => {
+        // Allow connections between compatible socket types
+        const fromSocket = from.socket;
+        const toSocket = to.socket;
+        
+        // Same socket types can always connect
+        if (fromSocket.name === toSocket.name) {
+          return true;
+        }
+        
+        // ExecutionSocket can connect to ExecutionSocket
+        if (fromSocket.name === "execution" && toSocket.name === "execution") {
+          return true;
+        }
+        
+        // ValueSocket can connect to BooleanSocket (for conditions)
+        if (fromSocket.name === "value" && toSocket.name === "boolean") {
+          return true;
+        }
+        
+        // BooleanSocket can connect to ValueSocket
+        if (fromSocket.name === "boolean" && toSocket.name === "value") {
+          return true;
+        }
+        
+        // UniversalSocket can connect to any socket
+        if (fromSocket.name === "universal" || toSocket.name === "universal") {
+          return true;
+        }
+        
+        // SoliditySocket can connect to ExecutionSocket (for backward compatibility)
+        if ((fromSocket.name === "solidity" && toSocket.name === "execution") ||
+            (fromSocket.name === "execution" && toSocket.name === "solidity")) {
+          return true;
+        }
+        
+        return false;
+      };
 
       // Install plugins
       editor.use(area);
