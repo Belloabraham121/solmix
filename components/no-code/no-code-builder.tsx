@@ -212,12 +212,10 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
         currentProject?.settings.license || "MIT"
       );
 
-      // Update nodes (convert editorData to nodes if needed)
-      const nodes = editorData?.nodes || [];
-      codeGeneratorRef.current.updateNodes(
-        nodes,
-        editorData?.connections || []
-      );
+      // Get actual node objects from the editor
+      const nodes = (reteEditorRef.current?.getNodes() || []) as any[];
+      const connections = reteEditorRef.current?.getConnections() || [];
+      codeGeneratorRef.current.updateNodes(nodes, connections);
 
       const contract = await codeGeneratorRef.current.generateContract();
 

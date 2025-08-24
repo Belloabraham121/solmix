@@ -253,15 +253,11 @@ export class PublicFunctionNode extends SolidityNode {
 
     this.addInput(
       "execution",
-      new ClassicPreset.Input(
-        new SoliditySocket({ name: "execution", type: "elementary" })
-      )
+      new ClassicPreset.Input(new ExecutionSocket())
     );
     this.addOutput(
       "execution",
-      new ClassicPreset.Output(
-        new SoliditySocket({ name: "execution", type: "elementary" })
-      )
+      new ClassicPreset.Output(new ExecutionSocket())
     );
   }
 }
@@ -291,15 +287,11 @@ export class PrivateFunctionNode extends SolidityNode {
 
     this.addInput(
       "execution",
-      new ClassicPreset.Input(
-        new SoliditySocket({ name: "execution", type: "elementary" })
-      )
+      new ClassicPreset.Input(new ExecutionSocket())
     );
     this.addOutput(
       "execution",
-      new ClassicPreset.Output(
-        new SoliditySocket({ name: "execution", type: "elementary" })
-      )
+      new ClassicPreset.Output(new ExecutionSocket())
     );
   }
 }
@@ -329,15 +321,11 @@ export class ViewFunctionNode extends SolidityNode {
 
     this.addInput(
       "execution",
-      new ClassicPreset.Input(
-        new SoliditySocket({ name: "execution", type: "elementary" })
-      )
+      new ClassicPreset.Input(new ExecutionSocket())
     );
     this.addOutput(
       "execution",
-      new ClassicPreset.Output(
-        new SoliditySocket({ name: "execution", type: "elementary" })
-      )
+      new ClassicPreset.Output(new ExecutionSocket())
     );
   }
 }
@@ -367,15 +355,11 @@ export class PayableFunctionNode extends SolidityNode {
 
     this.addInput(
       "execution",
-      new ClassicPreset.Input(
-        new SoliditySocket({ name: "execution", type: "elementary" })
-      )
+      new ClassicPreset.Input(new ExecutionSocket())
     );
     this.addOutput(
       "execution",
-      new ClassicPreset.Output(
-        new SoliditySocket({ name: "execution", type: "elementary" })
-      )
+      new ClassicPreset.Output(new ExecutionSocket())
     );
   }
 }

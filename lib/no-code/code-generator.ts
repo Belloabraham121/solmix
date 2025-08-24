@@ -507,8 +507,18 @@ export class SolidityCodeGenerator {
   }
 
   private getControlValue(node: SolidityNode, controlKey: string): string {
+    // Handle both full SolidityNode objects and simplified editor data
+    if (!node.controls || !node.controls[controlKey]) {
+      return "";
+    }
+    
     const control = node.controls[controlKey] as SolidityControl;
-    return control?.value || "";
+    if (!control) {
+      return "";
+    }
+    
+    // Access the value from the control
+    return control.value || "";
   }
 
   // Utility methods for external use

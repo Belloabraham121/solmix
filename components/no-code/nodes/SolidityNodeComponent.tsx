@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback } from "react";
+import React, { useCallback, useRef } from "react";
 import { ClassicPreset } from "rete";
 import { Input } from "@/components/ui/input";
 import {
@@ -129,8 +129,11 @@ export function SolidityNodeComponent({ data, emit }: SolidityNodeProps) {
             {inputs.map(([key, input]) => (
               <div key={key} className="flex items-center gap-2">
                 <div
-                  className="w-3 h-3 rounded-full bg-blue-500 border-2 border-white shadow-sm cursor-pointer hover:bg-blue-600"
+                  className="w-3 h-3 rounded-full bg-blue-500 border-2 border-white shadow-sm cursor-pointer hover:bg-blue-600 relative z-10"
+                  data-socket-key={key}
+                  data-socket-side="input"
                   data-testid={`input-${key}`}
+                  style={{ pointerEvents: 'auto' }}
                 />
                 <span className="text-xs text-gray-300">{key}</span>
               </div>
@@ -175,12 +178,12 @@ export function SolidityNodeComponent({ data, emit }: SolidityNodeProps) {
                       Parameters
                     </label>
                     <Input
-                        type="text"
-                        value={controlData.value || ""}
-                        onChange={(e) => handleControlChange(key, e.target.value)}
-                        placeholder="uint256 amount, address to"
-                        className="h-8 text-xs !bg-white !text-black border-gray-300"
-                      />
+                      type="text"
+                      value={controlData.value || ""}
+                      onChange={(e) => handleControlChange(key, e.target.value)}
+                      placeholder="uint256 amount, address to"
+                      className="h-8 text-xs !bg-white !text-black border-gray-300"
+                    />
                     <p className="text-xs text-gray-400">
                       Format: type name, type name
                     </p>
@@ -195,12 +198,12 @@ export function SolidityNodeComponent({ data, emit }: SolidityNodeProps) {
                       Returns
                     </label>
                     <Input
-                        type="text"
-                        value={controlData.value || ""}
-                        onChange={(e) => handleControlChange(key, e.target.value)}
-                        placeholder="uint256, bool"
-                        className="h-8 text-xs !bg-white !text-black border-gray-300"
-                      />
+                      type="text"
+                      value={controlData.value || ""}
+                      onChange={(e) => handleControlChange(key, e.target.value)}
+                      placeholder="uint256, bool"
+                      className="h-8 text-xs !bg-white !text-black border-gray-300"
+                    />
                     <p className="text-xs text-gray-400">
                       Return types separated by commas
                     </p>
@@ -214,12 +217,12 @@ export function SolidityNodeComponent({ data, emit }: SolidityNodeProps) {
                     {key.replace(/([A-Z])/g, " $1").trim()}
                   </label>
                   <Input
-                      type="text"
-                      value={controlData.value || ""}
-                      onChange={(e) => handleControlChange(key, e.target.value)}
-                      placeholder={`Enter ${key}`}
-                      className="h-8 text-xs !bg-white !text-black border-gray-300"
-                    />
+                    type="text"
+                    value={controlData.value || ""}
+                    onChange={(e) => handleControlChange(key, e.target.value)}
+                    placeholder={`Enter ${key}`}
+                    className="h-8 text-xs !bg-white !text-black border-gray-300"
+                  />
                 </div>
               );
             })}
@@ -233,8 +236,11 @@ export function SolidityNodeComponent({ data, emit }: SolidityNodeProps) {
               <div key={key} className="flex items-center justify-end gap-2">
                 <span className="text-xs text-gray-300">{key}</span>
                 <div
-                  className="w-3 h-3 rounded-full bg-green-500 border-2 border-white shadow-sm cursor-pointer hover:bg-green-600"
+                  className="w-3 h-3 rounded-full bg-green-500 border-2 border-white shadow-sm cursor-pointer hover:bg-green-600 relative z-10"
+                  data-socket-key={key}
+                  data-socket-side="output"
                   data-testid={`output-${key}`}
+                  style={{ pointerEvents: 'auto' }}
                 />
               </div>
             ))}

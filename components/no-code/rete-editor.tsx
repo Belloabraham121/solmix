@@ -23,6 +23,7 @@ import {
 import { codeGenerator } from "@/lib/no-code/code-generator";
 import { cn } from "@/lib/utils";
 import SolidityNodeComponent from "./nodes/SolidityNodeComponent";
+import { CustomSocket, CustomOutputSocket } from "./nodes/CustomSocket";
 
 interface ReteEditorProps {
   onNodeChange?: (nodes: any[]) => void;
@@ -38,6 +39,8 @@ export interface ReteEditorRef {
   arrangeNodes: () => void;
   fitToView: () => void;
   exportData: () => any;
+  getNodes: () => ClassicPreset.Node[];
+  getConnections: () => ClassicPreset.Connection<ClassicPreset.Node, ClassicPreset.Node>[];
 }
 
 type Schemes = GetSchemes<
@@ -98,9 +101,17 @@ const ReteEditor = forwardRef<ReteEditorRef, ReteEditorProps>(
       const connection = new ConnectionPlugin<Schemes, AreaExtra>();
       const reactRender = new ReactPlugin<Schemes, AreaExtra>();
 
-      // Configure area
+      // Configure area with pointer events
       AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {
         accumulating: AreaExtensions.accumulateOnCtrl(),
+      });
+      
+      // Enable pointer events for connections
+      area.addPipe((context) => {
+        if (context.type === 'pointerdown' || context.type === 'pointermove' || context.type === 'pointerup') {
+          return context;
+        }
+        return context;
       });
 
       // Configure react render with custom components
@@ -110,51 +121,62 @@ const ReteEditor = forwardRef<ReteEditorRef, ReteEditorProps>(
             node(context) {
               return SolidityNodeComponent;
             },
+            socket(context) {
+              if (context.side === 'output') {
+                return CustomOutputSocket;
+              }
+              return CustomSocket;
+            },
+            connection(context) {
+              return Presets.classic.Connection;
+            },
           },
         })
       );
 
       // Configure connections
       connection.addPreset(ConnectionPresets.classic.setup());
-      
+
       // Override connection validation after preset is added
       const originalCanMakeConnection = (connection as any).canMakeConnection;
       (connection as any).canMakeConnection = (from: any, to: any) => {
         // Allow connections between compatible socket types
         const fromSocket = from.socket;
         const toSocket = to.socket;
-        
+
         // Same socket types can always connect
         if (fromSocket.name === toSocket.name) {
           return true;
         }
-        
+
         // ExecutionSocket can connect to ExecutionSocket
         if (fromSocket.name === "execution" && toSocket.name === "execution") {
           return true;
         }
-        
+
         // ValueSocket can connect to BooleanSocket (for conditions)
         if (fromSocket.name === "value" && toSocket.name === "boolean") {
           return true;
         }
-        
+
         // BooleanSocket can connect to ValueSocket
         if (fromSocket.name === "boolean" && toSocket.name === "value") {
           return true;
         }
-        
+
         // UniversalSocket can connect to any socket
         if (fromSocket.name === "universal" || toSocket.name === "universal") {
           return true;
         }
-        
+
         // SoliditySocket can connect to ExecutionSocket (for backward compatibility)
-        if ((fromSocket.name === "solidity" && toSocket.name === "execution") ||
-            (fromSocket.name === "execution" && toSocket.name === "solidity")) {
+        if (
+          (fromSocket.name === "solidity" && toSocket.name === "execution") ||
+          (fromSocket.name === "execution" && toSocket.name === "solidity")
+        ) {
           return true;
         }
-        
+
         return false;
       };
 
@@ -184,7 +206,7 @@ const ReteEditor = forwardRef<ReteEditorRef, ReteEditorProps>(
 
           onEditorChange?.(editorData);
 
-          // Trigger real-time code generation
+          // Trigger real-time code generation with full node objects
           generateCodeRealTime(nodes, Array.from(editor.getConnections()));
         }
         if (
@@ -206,7 +228,7 @@ const ReteEditor = forwardRef<ReteEditorRef, ReteEditorProps>(
 
           onEditorChange?.(editorData);
 
-          // Trigger real-time code generation
+          // Trigger real-time code generation with full node objects
           generateCodeRealTime(nodes, connections);
         }
 
@@ -370,6 +392,14 @@ const ReteEditor = forwardRef<ReteEditorRef, ReteEditorProps>(
               })
             ),
           };
+        },
+        getNodes: () => {
+          if (!editorRef.current) return [];
+          return Array.from(editorRef.current.getNodes());
+        },
+        getConnections: () => {
+          if (!editorRef.current) return [];
+          return Array.from(editorRef.current.getConnections());
         },
       }),
       []
