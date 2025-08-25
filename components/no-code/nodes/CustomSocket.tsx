@@ -11,7 +11,7 @@ export function CustomSocket({ data }: CustomSocketProps) {
       data-socket-key={data.name}
       data-socket-side="input"
       className="w-3 h-3 rounded-full border-2 border-white bg-blue-500 hover:bg-blue-600 cursor-pointer relative z-10"
-      style={{ pointerEvents: 'auto' }}
+      style={{ pointerEvents: "auto" }}
       onPointerDown={(e) => e.stopPropagation()}
     />
   );
@@ -23,7 +23,7 @@ export function CustomOutputSocket({ data }: CustomSocketProps) {
       data-socket-key={data.name}
       data-socket-side="output"
       className="w-3 h-3 rounded-full border-2 border-white bg-green-500 hover:bg-green-600 cursor-pointer relative z-10"
-      style={{ pointerEvents: 'auto' }}
+      style={{ pointerEvents: "auto" }}
       onPointerDown={(e) => e.stopPropagation()}
     />
   );

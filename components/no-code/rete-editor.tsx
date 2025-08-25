@@ -23,7 +23,6 @@ import {
 import { codeGenerator } from "@/lib/no-code/code-generator";
 import { cn } from "@/lib/utils";
 import SolidityNodeComponent from "./nodes/SolidityNodeComponent";
-import { CustomSocket, CustomOutputSocket } from "./nodes/CustomSocket";
 
 interface ReteEditorProps {
   onNodeChange?: (nodes: any[]) => void;
@@ -40,7 +39,10 @@ export interface ReteEditorRef {
   fitToView: () => void;
   exportData: () => any;
   getNodes: () => ClassicPreset.Node[];
-  getConnections: () => ClassicPreset.Connection<ClassicPreset.Node, ClassicPreset.Node>[];
+  getConnections: () => ClassicPreset.Connection<
+    ClassicPreset.Node,
+    ClassicPreset.Node
+  >[];
 }
 
 type Schemes = GetSchemes<
@@ -105,10 +107,14 @@ const ReteEditor = forwardRef<ReteEditorRef, ReteEditorProps>(
       AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {
         accumulating: AreaExtensions.accumulateOnCtrl(),
       });
-      
+
       // Enable pointer events for connections
       area.addPipe((context) => {
-        if (context.type === 'pointerdown' || context.type === 'pointermove' || context.type === 'pointerup') {
+        if (
+          context.type === "pointerdown" ||
+          context.type === "pointermove" ||
+          context.type === "pointerup"
+        ) {
           return context;
         }
         return context;
@@ -122,10 +128,7 @@ const ReteEditor = forwardRef<ReteEditorRef, ReteEditorProps>(
               return SolidityNodeComponent;
             },
             socket(context) {
-              if (context.side === 'output') {
-                return CustomOutputSocket;
-              }
-              return CustomSocket;
+              return Presets.classic.Socket;
             },
             connection(context) {
               return Presets.classic.Connection;

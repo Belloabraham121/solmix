@@ -133,7 +133,8 @@ export function SolidityNodeComponent({ data, emit }: SolidityNodeProps) {
                   data-socket-key={key}
                   data-socket-side="input"
                   data-testid={`input-${key}`}
-                  style={{ pointerEvents: 'auto' }}
+                  style={{ pointerEvents: "auto" }}
+                  onPointerDown={(e) => e.stopPropagation()}
                 />
                 <span className="text-xs text-gray-300">{key}</span>
               </div>
@@ -240,7 +241,8 @@ export function SolidityNodeComponent({ data, emit }: SolidityNodeProps) {
                   data-socket-key={key}
                   data-socket-side="output"
                   data-testid={`output-${key}`}
-                  style={{ pointerEvents: 'auto' }}
+                  style={{ pointerEvents: "auto" }}
+                  onPointerDown={(e) => e.stopPropagation()}
                 />
               </div>
             ))}

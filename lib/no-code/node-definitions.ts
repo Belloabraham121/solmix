@@ -217,10 +217,7 @@ export class ConstructorFunctionNode extends SolidityNode {
     this.addInput("param2", new ClassicPreset.Input(new UniversalSocket()));
     this.addInput("param3", new ClassicPreset.Input(new UniversalSocket()));
 
-    this.addInput(
-      "execution",
-      new ClassicPreset.Input(new ExecutionSocket())
-    );
+    this.addInput("execution", new ClassicPreset.Input(new ExecutionSocket()));
     this.addOutput(
       "execution",
       new ClassicPreset.Output(new ExecutionSocket())
@@ -251,10 +248,7 @@ export class PublicFunctionNode extends SolidityNode {
     this.addInput("param2", new ClassicPreset.Input(new UniversalSocket()));
     this.addInput("param3", new ClassicPreset.Input(new UniversalSocket()));
 
-    this.addInput(
-      "execution",
-      new ClassicPreset.Input(new ExecutionSocket())
-    );
+    this.addInput("execution", new ClassicPreset.Input(new ExecutionSocket()));
     this.addOutput(
       "execution",
       new ClassicPreset.Output(new ExecutionSocket())
@@ -285,10 +279,7 @@ export class PrivateFunctionNode extends SolidityNode {
     this.addInput("param2", new ClassicPreset.Input(new UniversalSocket()));
     this.addInput("param3", new ClassicPreset.Input(new UniversalSocket()));
 
-    this.addInput(
-      "execution",
-      new ClassicPreset.Input(new ExecutionSocket())
-    );
+    this.addInput("execution", new ClassicPreset.Input(new ExecutionSocket()));
     this.addOutput(
       "execution",
       new ClassicPreset.Output(new ExecutionSocket())
@@ -319,10 +310,7 @@ export class ViewFunctionNode extends SolidityNode {
     this.addInput("param2", new ClassicPreset.Input(new UniversalSocket()));
     this.addInput("param3", new ClassicPreset.Input(new UniversalSocket()));
 
-    this.addInput(
-      "execution",
-      new ClassicPreset.Input(new ExecutionSocket())
-    );
+    this.addInput("execution", new ClassicPreset.Input(new ExecutionSocket()));
     this.addOutput(
       "execution",
       new ClassicPreset.Output(new ExecutionSocket())
@@ -353,10 +341,7 @@ export class PayableFunctionNode extends SolidityNode {
     this.addInput("param2", new ClassicPreset.Input(new UniversalSocket()));
     this.addInput("param3", new ClassicPreset.Input(new UniversalSocket()));
 
-    this.addInput(
-      "execution",
-      new ClassicPreset.Input(new ExecutionSocket())
-    );
+    this.addInput("execution", new ClassicPreset.Input(new ExecutionSocket()));
     this.addOutput(
       "execution",
       new ClassicPreset.Output(new ExecutionSocket())
@@ -379,12 +364,7 @@ export class EventNode extends SolidityNode {
       )
     );
 
-    this.addInput(
-      "trigger",
-      new ClassicPreset.Input(
-        new SoliditySocket({ name: "execution", type: "elementary" })
-      )
-    );
+    this.addInput("trigger", new ClassicPreset.Input(new ExecutionSocket()));
   }
 }
 
@@ -452,8 +432,14 @@ export class IfStatementNode extends SolidityNode {
 
     // Execution flow
     this.addInput("exec_in", new ClassicPreset.Input(new ExecutionSocket()));
-    this.addOutput("exec_true", new ClassicPreset.Output(new ExecutionSocket()));
-    this.addOutput("exec_false", new ClassicPreset.Output(new ExecutionSocket()));
+    this.addOutput(
+      "exec_true",
+      new ClassicPreset.Output(new ExecutionSocket())
+    );
+    this.addOutput(
+      "exec_false",
+      new ClassicPreset.Output(new ExecutionSocket())
+    );
     this.addOutput("exec_out", new ClassicPreset.Output(new ExecutionSocket()));
 
     // Condition input
@@ -466,7 +452,10 @@ export class ComparisonNode extends SolidityNode {
   constructor() {
     super("Comparison");
 
-    this.addControl("operator", new SolidityControl("operator", ">", "Operator (>, <, ==, !=, >=, <=)"));
+    this.addControl(
+      "operator",
+      new SolidityControl("operator", ">", "Operator (>, <, ==, !=, >=, <=)")
+    );
 
     // Value inputs
     this.addInput("left", new ClassicPreset.Input(new ValueSocket()));
@@ -482,7 +471,10 @@ export class AssignmentNode extends SolidityNode {
   constructor() {
     super("Assignment");
 
-    this.addControl("variable", new SolidityControl("variable", "", "Variable name"));
+    this.addControl(
+      "variable",
+      new SolidityControl("variable", "", "Variable name")
+    );
 
     // Execution flow
     this.addInput("exec_in", new ClassicPreset.Input(new ExecutionSocket()));
@@ -498,7 +490,10 @@ export class VariableReferenceNode extends SolidityNode {
   constructor() {
     super("Variable Reference");
 
-    this.addControl("variable", new SolidityControl("variable", "", "Variable name"));
+    this.addControl(
+      "variable",
+      new SolidityControl("variable", "", "Variable name")
+    );
 
     // Value output
     this.addOutput("value", new ClassicPreset.Output(new ValueSocket()));
@@ -510,7 +505,10 @@ export class MathOperationNode extends SolidityNode {
   constructor() {
     super("Math Operation");
 
-    this.addControl("operator", new SolidityControl("operator", "+", "Operator (+, -, *, /, %)"));
+    this.addControl(
+      "operator",
+      new SolidityControl("operator", "+", "Operator (+, -, *, /, %)")
+    );
 
     // Value inputs
     this.addInput("left", new ClassicPreset.Input(new ValueSocket()));
@@ -527,7 +525,10 @@ export class LiteralValueNode extends SolidityNode {
     super("Literal Value");
 
     this.addControl("value", new SolidityControl("value", "0", "Value"));
-    this.addControl("type", new SolidityControl("type", "uint256", "Type (uint256, string, bool)"));
+    this.addControl(
+      "type",
+      new SolidityControl("type", "uint256", "Type (uint256, string, bool)")
+    );
 
     // Value output
     this.addOutput("value", new ClassicPreset.Output(new ValueSocket()));
@@ -539,7 +540,10 @@ export class LogicalOperationNode extends SolidityNode {
   constructor() {
     super("Logical Operation");
 
-    this.addControl("operator", new SolidityControl("operator", "&&", "Operator (&&, ||, !)"));
+    this.addControl(
+      "operator",
+      new SolidityControl("operator", "&&", "Operator (&&, ||, !)")
+    );
 
     // Boolean inputs
     this.addInput("left", new ClassicPreset.Input(new BooleanSocket()));

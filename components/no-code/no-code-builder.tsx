@@ -213,7 +213,7 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
       );
 
       // Get actual node objects from the editor
-      const nodes = (reteEditorRef.current?.getNodes() || []) as any[];
+      const nodes = reteEditorRef.current?.getNodes() || [];
       const connections = reteEditorRef.current?.getConnections() || [];
       codeGeneratorRef.current.updateNodes(nodes, connections);
 
