@@ -331,7 +331,8 @@ export class SOLCTypeExtractor {
     };
 
     try {
-      const output = JSON.parse(this.solc.compile(JSON.stringify(input)));
+      const compileResult = this.solc.compile(JSON.stringify(input));
+      const output = typeof compileResult === 'string' ? JSON.parse(compileResult) : compileResult;
       
       const contracts = this.extractContractInfo(output);
       const errors = output.errors || [];

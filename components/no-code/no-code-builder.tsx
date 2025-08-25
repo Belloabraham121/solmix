@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { useAccount, useWalletClient, usePublicClient } from "wagmi";
+import { getSolidityCompiler } from "@/lib/solidity-compiler";
+import { seiAtlantic2 } from "@/lib/wallet-config";
 import {
   Save,
   FolderOpen,
@@ -53,6 +56,14 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
     autoSave,
     autoGenerate,
   } = noCodeState;
+  
+  // Wallet connection hooks
+  const { address, isConnected, chain } = useAccount();
+  const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
+  
+  // Deployment state
+  const [isDeploying, setIsDeploying] = useState(false);
 
   // Initialize code generator
   useEffect(() => {
@@ -186,14 +197,83 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
       return;
     }
 
-    try {
-      // TODO: Integrate with existing SolMix deployment system
-      toast.info("Deployment integration coming soon");
-    } catch (error) {
-      console.error("Failed to deploy contract:", error);
-      toast.error("Failed to deploy contract");
+    if (!isConnected || !walletClient) {
+      toast.error("Please connect your wallet first in the normal editor");
+      return;
     }
-  }, [generatedContract]);
+
+    if (chain?.id !== seiAtlantic2.id) {
+      toast.error("Please switch to Sei Atlantic-2 testnet");
+      return;
+    }
+
+    setIsDeploying(true);
+
+    try {
+      // Compile the generated contract
+      const compiler = getSolidityCompiler();
+      const result = await compiler.compileContract(
+        `${currentProject?.settings.contractName || "MyContract"}.sol`,
+        generatedContract.sourceCode
+      );
+
+      if (result.errors.length > 0) {
+        console.error("Compilation errors:", result.errors);
+        toast.error("Contract compilation failed");
+        return;
+      }
+
+      if (!result.output?.contracts) {
+        toast.error("No compiled contract found");
+        return;
+      }
+
+      // Get the compiled contract
+      const contractName = Object.keys(result.output.contracts)[0];
+      const contract = result.output.contracts[contractName];
+      const contractKey = Object.keys(contract)[0];
+      const compiledContract = contract[contractKey];
+
+      const bytecode = compiledContract.evm?.bytecode?.object;
+      if (!bytecode) {
+        toast.error("No bytecode found in compiled contract");
+        return;
+      }
+
+      // Deploy contract
+      const deploymentData = `0x${bytecode}` as `0x${string}`;
+
+      toast.info("Deploying contract...");
+      
+      const hash = await walletClient.sendTransaction({
+        to: undefined, // Contract creation
+        data: deploymentData,
+        gas: BigInt(3000000), // Default gas limit
+      });
+
+      toast.info("Transaction sent. Waiting for confirmation...");
+
+      // Wait for transaction receipt
+      if (publicClient) {
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        
+        if (receipt.contractAddress) {
+          toast.success(
+            `Contract deployed successfully! Address: ${receipt.contractAddress}`
+          );
+        } else {
+          toast.success("Contract deployed successfully!");
+        }
+      } else {
+        toast.success("Contract deployment transaction sent!");
+      }
+    } catch (error: any) {
+      console.error("Deployment error:", error);
+      toast.error(error.message || "Failed to deploy contract");
+    } finally {
+      setIsDeploying(false);
+    }
+  }, [generatedContract, isConnected, walletClient, chain, publicClient, currentProject]);
 
   const handleGenerateCode = useCallback(async () => {
     if (!editorData || !codeGeneratorRef.current) return;
@@ -215,7 +295,7 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
       // Get actual node objects from the editor
       const nodes = reteEditorRef.current?.getNodes() || [];
       const connections = reteEditorRef.current?.getConnections() || [];
-      codeGeneratorRef.current.updateNodes(nodes, connections);
+      codeGeneratorRef.current.updateNodes(nodes as any, connections);
 
       const contract = await codeGeneratorRef.current.generateContract();
 
@@ -323,10 +403,10 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
               Export
             </Button>
             <Button
-              variant="outline"
+              variant="default"
               size="sm"
               onClick={handleFitToView}
-              className="border-gray-600 text-gray-300 hover:text-white"
+              className="bg-gray-700 hover:bg-gray-600"
             >
               <Focus className="w-4 h-4 mr-2" />
               Fit to View
@@ -335,14 +415,47 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
             <Button
               variant="default"
               size="sm"
+              onClick={handleGenerateCode}
+              disabled={isGenerating}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isGenerating ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <FileText className="w-4 h-4 mr-2" />
+              )}
+              {isGenerating ? "Generating..." : "Generate Code"}
+            </Button>
+            <Separator orientation="vertical" className="h-6 bg-gray-600" />
+            <Button
+              variant="default"
+              size="sm"
               onClick={handleDeploy}
               disabled={
-                !generatedContract || generatedContract.errors.length > 0
+                !generatedContract || 
+                (generatedContract && generatedContract.errors.length > 0) || 
+                isDeploying ||
+                !isConnected
               }
               className="bg-blue-600 hover:bg-blue-700"
+              title={
+                !generatedContract ? "Generate code first" :
+                (generatedContract && generatedContract.errors.length > 0) ? "Fix code errors first" :
+                !isConnected ? "Connect wallet first" :
+                isDeploying ? "Deployment in progress" :
+                "Ready to deploy"
+              }
             >
-              <Rocket className="w-4 h-4 mr-2" />
-              Deploy
+              {isDeploying ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Rocket className="w-4 h-4 mr-2" />
+              )}
+              {isDeploying ? "Deploying..." : 
+               !generatedContract ? "Generate Code First" :
+               (generatedContract && generatedContract.errors.length > 0) ? "Fix Errors" :
+               !isConnected ? "Connect Wallet" :
+               "Deploy"}
             </Button>
           </div>
         </div>
