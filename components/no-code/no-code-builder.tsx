@@ -258,6 +258,15 @@ export default function NoCodeBuilder({ className }: NoCodeBuilderProps) {
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         
         if (receipt.contractAddress) {
+          // Update the generated contract with deployment information
+          const updatedContract = {
+            ...generatedContract,
+            deployedAddress: receipt.contractAddress,
+            deploymentTxHash: hash,
+            deploymentNetwork: chain?.name || 'Unknown Network'
+          };
+          actions.setGeneratedContract(updatedContract);
+          
           toast.success(
             `Contract deployed successfully! Address: ${receipt.contractAddress}`
           );

@@ -9,6 +9,9 @@ export interface GeneratedContract {
   metadata?: any;
   errors: string[];
   warnings: string[];
+  deployedAddress?: string;
+  deploymentTxHash?: string;
+  deploymentNetwork?: string;
 }
 
 export interface CodeGenerationOptions {

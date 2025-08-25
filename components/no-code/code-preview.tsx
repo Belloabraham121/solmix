@@ -13,7 +13,8 @@ import {
   AlertTriangle,
   Code,
   FileText,
-  Settings
+  Settings,
+  ExternalLink
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GeneratedContract } from "@/lib/no-code/code-generator";
@@ -38,7 +39,7 @@ export default function CodePreview({
   const editorRef = useRef<HTMLDivElement>(null);
   const [monaco, setMonaco] = useState<any>(null);
   const [editor, setEditor] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'code' | 'abi' | 'errors'>('code');
+  const [activeTab, setActiveTab] = useState<'code' | 'abi' | 'errors' | 'deployed'>('code');
 
   // Initialize Monaco Editor
   useEffect(() => {
@@ -172,7 +173,8 @@ export default function CodePreview({
   const tabs = [
     { id: 'code', label: 'Source Code', icon: <Code className="w-4 h-4" /> },
     { id: 'abi', label: 'ABI', icon: <FileText className="w-4 h-4" /> },
-    { id: 'errors', label: 'Issues', icon: <AlertCircle className="w-4 h-4" /> }
+    { id: 'errors', label: 'Issues', icon: <AlertCircle className="w-4 h-4" /> },
+    { id: 'deployed', label: 'Deployed', icon: <ExternalLink className="w-4 h-4" /> }
   ] as const;
 
   return (
@@ -247,6 +249,11 @@ export default function CodePreview({
                   {contract.errors.length + contract.warnings.length}
                 </Badge>
               )}
+              {tab.id === 'deployed' && contract?.deployedAddress && (
+                <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs bg-green-600 text-white">
+                  ✓
+                </Badge>
+              )}
             </Button>
           ))}
         </div>
@@ -303,6 +310,73 @@ export default function CodePreview({
                 <div className="text-center text-gray-400 text-sm py-8">
                   <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
                   No issues found
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        )}
+
+        {activeTab === 'deployed' && (
+          <ScrollArea className="h-full">
+            <div className="p-3">
+              {contract?.deployedAddress ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 p-3 bg-green-900/20 border border-green-800 rounded">
+                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium text-green-400 mb-1">Contract Deployed Successfully</div>
+                      <div className="text-xs text-gray-300">Your smart contract has been deployed to the blockchain</div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-400 mb-1 block">Contract Address</label>
+                      <div className="flex items-center gap-2 p-2 bg-gray-800 border border-gray-700 rounded">
+                        <code className="text-sm text-white font-mono flex-1">{contract.deployedAddress}</code>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigator.clipboard.writeText(contract.deployedAddress!)}
+                          className="h-6 px-2 text-gray-400 hover:text-white"
+                        >
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {contract.deploymentTxHash && (
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 mb-1 block">Transaction Hash</label>
+                        <div className="flex items-center gap-2 p-2 bg-gray-800 border border-gray-700 rounded">
+                          <code className="text-sm text-white font-mono flex-1 truncate">{contract.deploymentTxHash}</code>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigator.clipboard.writeText(contract.deploymentTxHash!)}
+                            className="h-6 px-2 text-gray-400 hover:text-white"
+                          >
+                            <Copy className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {contract.deploymentNetwork && (
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 mb-1 block">Network</label>
+                        <div className="p-2 bg-gray-800 border border-gray-700 rounded">
+                          <span className="text-sm text-white">{contract.deploymentNetwork}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-gray-400 text-sm py-8">
+                  <ExternalLink className="w-8 h-8 mx-auto mb-2 text-gray-500" />
+                  <div className="mb-1">Contract Not Deployed</div>
+                  <div className="text-xs">Deploy your contract to see deployment information here</div>
                 </div>
               )}
             </div>
