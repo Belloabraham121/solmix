@@ -10,6 +10,28 @@ const nextConfig = {
     unoptimized: true,
   },
   webpack: (config, { isServer, webpack }) => {
+    // Add externals for server-side to prevent bundling Node.js modules
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push({
+        'solc': 'commonjs solc',
+        'child_process': 'commonjs child_process',
+        'fs': 'commonjs fs',
+        'path': 'commonjs path',
+        'crypto': 'commonjs crypto',
+        'stream': 'commonjs stream',
+        'zlib': 'commonjs zlib',
+        'util': 'commonjs util',
+        'events': 'commonjs events',
+        'os': 'commonjs os',
+        'http': 'commonjs http',
+        'https': 'commonjs https',
+        'url': 'commonjs url',
+        'assert': 'commonjs assert',
+        'debug': 'commonjs debug'
+      });
+    }
+
     // Handle Node.js modules in the browser
     if (!isServer) {
       config.resolve.fallback = {
@@ -28,6 +50,8 @@ const nextConfig = {
         util: false,
         buffer: 'buffer',
         events: false,
+        'child_process': false,
+        'solc': false,
       }
       
       // Add buffer polyfill

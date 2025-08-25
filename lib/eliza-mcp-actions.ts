@@ -1,11 +1,24 @@
-import {
-  Action,
-  IAgentRuntime,
-  Memory,
-  State,
-  HandlerCallback,
-  ActionExample,
-} from "@elizaos/core";
+// Note: Using any types as @elizaos/core types are not fully defined
+interface Action {
+  name: string;
+  similes: string[];
+  validate: (runtime: any, message: any) => Promise<boolean>;
+  description: string;
+  handler: (runtime: any, message: any, state: any, options: any, callback?: any) => Promise<boolean>;
+  examples: any[];
+}
+
+interface Memory {
+  content: { text: string; [key: string]: any };
+  [key: string]: any;
+}
+
+interface State {
+  [key: string]: any;
+}
+
+type HandlerCallback = (response: { text: string; content: any }) => void;
+type ActionExample = any[];
 import { getMCPConnectionManager } from "./mcp-connection-manager";
 
 interface BalanceActionContent extends Record<string, unknown> {
@@ -32,7 +45,7 @@ export const balanceAction: Action = {
     "GET_WALLET_BALANCE",
     "BALANCE_INQUIRY"
   ],
-  validate: async (runtime: IAgentRuntime, message: Memory) => {
+  validate: async (runtime: any, message: Memory) => {
     const text = message.content.text.toLowerCase();
     
     // Check if the message contains balance-related keywords and an address
@@ -43,7 +56,7 @@ export const balanceAction: Action = {
   },
   description: "Check the balance of a cryptocurrency address on SEI blockchain",
   handler: async (
-    runtime: IAgentRuntime,
+    runtime: any,
     message: Memory,
     state: State,
     _options: { [key: string]: unknown },
@@ -158,7 +171,7 @@ export const balanceAction: Action = {
         },
       },
     ],
-  ] as ActionExample[][],
+  ] as any,
 };
 
 export const transactionAction: Action = {
@@ -170,7 +183,7 @@ export const transactionAction: Action = {
     "GET_TX_INFO",
     "TRANSACTION_DETAILS"
   ],
-  validate: async (runtime: IAgentRuntime, message: Memory) => {
+  validate: async (runtime: any, message: Memory) => {
     const text = message.content.text.toLowerCase();
     
     // Check if the message contains transaction-related keywords and a tx hash
@@ -181,7 +194,7 @@ export const transactionAction: Action = {
   },
   description: "Get transaction details by hash on SEI blockchain",
   handler: async (
-    runtime: IAgentRuntime,
+    runtime: any,
     message: Memory,
     state: State,
     _options: { [key: string]: unknown },
@@ -266,7 +279,7 @@ export const transactionAction: Action = {
         },
       },
     ],
-  ] as ActionExample[][],
+  ] as any,
 };
 
 export const blockAction: Action = {
@@ -278,7 +291,7 @@ export const blockAction: Action = {
     "GET_BLOCK_INFO",
     "BLOCK_DETAILS"
   ],
-  validate: async (runtime: IAgentRuntime, message: Memory) => {
+  validate: async (runtime: any, message: Memory) => {
     const text = message.content.text.toLowerCase();
     
     // Check if the message contains block-related keywords
@@ -289,7 +302,7 @@ export const blockAction: Action = {
   },
   description: "Get block information by number or get the latest block on SEI blockchain",
   handler: async (
-    runtime: IAgentRuntime,
+    runtime: any,
     message: Memory,
     state: State,
     _options: { [key: string]: unknown },
@@ -378,7 +391,7 @@ export const blockAction: Action = {
         },
       },
     ],
-  ] as ActionExample[][],
+  ] as any,
 };
 
 // Export all actions for easy import
