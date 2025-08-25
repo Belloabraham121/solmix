@@ -74,6 +74,11 @@ class ProjectPersistenceService {
   private readonly DB_VERSION = 1;
 
   async init(): Promise<void> {
+    if (typeof window === 'undefined') {
+      console.warn('IndexedDB not available in server environment');
+      return;
+    }
+    
     try {
       this.db = await openDB<NoCodeDB>(this.DB_NAME, this.DB_VERSION, {
         upgrade(db) {
@@ -98,6 +103,9 @@ class ProjectPersistenceService {
   }
 
   private ensureDB(): IDBPDatabase<NoCodeDB> {
+    if (typeof window === 'undefined') {
+      throw new Error('IndexedDB not available in server environment');
+    }
     if (!this.db) {
       throw new Error('Database not initialized. Call init() first.');
     }

@@ -794,25 +794,44 @@ export class MCPPluginSystem extends EventEmitter {
 
     const storage: MCPPluginStorage = {
       get: async (key) => {
-        // In a real implementation, this would use persistent storage
+        // Check if we're in a browser environment
+        if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+          return null;
+        }
         return localStorage.getItem(`plugin_${plugin.id}_${key}`);
       },
       set: async (key, value) => {
+        // Check if we're in a browser environment
+        if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+          return;
+        }
         localStorage.setItem(
           `plugin_${plugin.id}_${key}`,
           JSON.stringify(value)
         );
       },
       delete: async (key) => {
+        // Check if we're in a browser environment
+        if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+          return;
+        }
         localStorage.removeItem(`plugin_${plugin.id}_${key}`);
       },
       clear: async () => {
+        // Check if we're in a browser environment
+        if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+          return;
+        }
         const keys = Object.keys(localStorage).filter((k) =>
           k.startsWith(`plugin_${plugin.id}_`)
         );
         keys.forEach((key) => localStorage.removeItem(key));
       },
       keys: async () => {
+        // Check if we're in a browser environment
+        if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+          return [];
+        }
         return Object.keys(localStorage)
           .filter((k) => k.startsWith(`plugin_${plugin.id}_`))
           .map((k) => k.replace(`plugin_${plugin.id}_`, ""));
