@@ -242,12 +242,51 @@ export class IndexedDBStorage {
   }
 }
 
-// Export a singleton instance
-export const fileStorage = new IndexedDBStorage({
-  dbName: 'solmix-file-system',
-  dbVersion: 1,
-  storeName: 'files'
-});
+// Export a lazy singleton instance
+let fileStorageInstance: IndexedDBStorage | null = null;
+
+export function getFileStorage(): IndexedDBStorage {
+  if (!fileStorageInstance) {
+    fileStorageInstance = new IndexedDBStorage({
+      dbName: 'solmix-file-system',
+      dbVersion: 1,
+      storeName: 'files'
+    });
+  }
+  return fileStorageInstance;
+}
+
+// Export fileStorage that's safe for SSR
+export const fileStorage = {
+  async init() {
+    if (typeof window === 'undefined') return;
+    return getFileStorage().init();
+  },
+  async setItem(key: string, value: any) {
+    if (typeof window === 'undefined') return;
+    return getFileStorage().setItem(key, value);
+  },
+  async getItem(key: string) {
+    if (typeof window === 'undefined') return null;
+    return getFileStorage().getItem(key);
+  },
+  async removeItem(key: string) {
+    if (typeof window === 'undefined') return;
+    return getFileStorage().removeItem(key);
+  },
+  async clear() {
+    if (typeof window === 'undefined') return;
+    return getFileStorage().clear();
+  },
+  async getAllKeys() {
+    if (typeof window === 'undefined') return [];
+    return getFileStorage().getAllKeys();
+  },
+  close() {
+    if (typeof window === 'undefined') return;
+    return getFileStorage().close();
+  }
+};
 
 // Migration utility from localStorage to IndexedDB
 export async function migrateFromLocalStorage(): Promise<boolean> {

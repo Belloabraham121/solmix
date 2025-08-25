@@ -36,6 +36,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
+import { fileSystem } from "@/lib/file-system";
 
 interface MCPMessage {
   id: string;
@@ -545,58 +546,58 @@ export default function MCPInterface({ className }: MCPInterfaceProps) {
             if (fileData.action === 'create_browser_file') {
               console.log('[FILE CREATION] Processing file creation:', fileData);
               
-              // Import file system dynamically to avoid SSR issues
-              const { fileSystem } = await import('@/lib/file-system');
-              
-              // Extract file details
-              const fileName = fileData.name || 'untitled';
-              const extension = fileData.extension || 'txt';
-              const content = fileData.content || '';
-              const parentId = fileData.parentId;
-              
-              // Ensure the filename has the proper extension
-              const fullFileName = fileName.includes('.') ? fileName : `${fileName}.${extension}`;
-              
-              console.log(`[FILE CREATION] Creating file: ${fullFileName} (extension: ${extension})`);
-              
-              // Wait for file system initialization before creating the file
-              console.log(`[FILE CREATION] Ensuring file system initialization...`);
-              await fileSystem.ensureInitialized();
-              
-              // Create the file with appropriate extension
-              console.log(`[FILE CREATION] Creating file with: name=${fullFileName}, parentId=${parentId}, extension=${extension}`);
-              const newFile = await fileSystem.createFileAsync(fullFileName, parentId, extension);
-              console.log(`[FILE CREATION] Created file object:`, newFile);
-              
-              // Update the file content if provided
-              if (content) {
-                console.log(`[FILE CREATION] Updating file content for ${newFile.id}`);
-                await fileSystem.updateFileAsync(newFile.id, content);
-                console.log(`[FILE CREATION] Content updated successfully`);
-              }
-              
-              console.log(`[FILE CREATION] Successfully created file: ${fullFileName} (ID: ${newFile.id})`);
-              
-              // Add a system message to indicate file was created
-              const fileCreatedMessage: MCPMessage = {
-                id: (Date.now() + Math.random()).toString(),
-                type: "system",
-                content: `📁 File "${fullFileName}" has been created and is now available in your file explorer!`,
-                timestamp: new Date(),
-              };
-              setMessages((prev) => [...prev, fileCreatedMessage]);
-              
-              // Dispatch a custom event to trigger file explorer refresh
+              // Use static import with browser check
               if (typeof window !== 'undefined') {
-                console.log(`[FILE CREATION] Dispatching fileSystemUpdate event for file: ${newFile.id}`);
-                window.dispatchEvent(new CustomEvent('fileSystemUpdate', {
-                  detail: { 
-                    action: 'create',
-                    fileId: newFile.id,
-                    fileName: fullFileName,
-                    extension: extension
-                  }
-                }));
+                // Extract file details
+                const fileName = fileData.name || 'untitled';
+                const extension = fileData.extension || 'txt';
+                const content = fileData.content || '';
+                const parentId = fileData.parentId;
+              
+                // Ensure the filename has the proper extension
+                const fullFileName = fileName.includes('.') ? fileName : `${fileName}.${extension}`;
+                
+                console.log(`[FILE CREATION] Creating file: ${fullFileName} (extension: ${extension})`);
+                
+                // Wait for file system initialization before creating the file
+                console.log(`[FILE CREATION] Ensuring file system initialization...`);
+                await fileSystem.ensureInitialized();
+                
+                // Create the file with appropriate extension
+                console.log(`[FILE CREATION] Creating file with: name=${fullFileName}, parentId=${parentId}, extension=${extension}`);
+                const newFile = await fileSystem.createFileAsync(fullFileName, parentId, extension);
+                console.log(`[FILE CREATION] Created file object:`, newFile);
+                
+                // Update the file content if provided
+                if (content) {
+                  console.log(`[FILE CREATION] Updating file content for ${newFile.id}`);
+                  await fileSystem.updateFileAsync(newFile.id, content);
+                  console.log(`[FILE CREATION] Content updated successfully`);
+                }
+                
+                console.log(`[FILE CREATION] Successfully created file: ${fullFileName} (ID: ${newFile.id})`);
+                
+                // Add a system message to indicate file was created
+                const fileCreatedMessage: MCPMessage = {
+                  id: (Date.now() + Math.random()).toString(),
+                  type: "system",
+                  content: `📁 File "${fullFileName}" has been created and is now available in your file explorer!`,
+                  timestamp: new Date(),
+                };
+                setMessages((prev) => [...prev, fileCreatedMessage]);
+                
+                // Dispatch a custom event to trigger file explorer refresh
+                if (typeof window !== 'undefined') {
+                  console.log(`[FILE CREATION] Dispatching fileSystemUpdate event for file: ${newFile.id}`);
+                  window.dispatchEvent(new CustomEvent('fileSystemUpdate', {
+                    detail: { 
+                      action: 'create',
+                      fileId: newFile.id,
+                      fileName: fullFileName,
+                      extension: extension
+                    }
+                  }));
+                }
               }
             }
           } catch (parseError) {

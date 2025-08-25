@@ -52,32 +52,40 @@ export class SOLCTypeExtractor {
 
   private async initializeSolc() {
     try {
-      // Check if we're in a browser environment first
+      // Check if we're in a browser environment
       if (typeof window !== 'undefined') {
-        // In browser, use a lightweight wrapper that doesn't actually compile
-        // This is for type extraction and UI purposes only
-        this.solc = {
-          compile: () => ({ errors: [], contracts: {} }),
-          version: () => '0.8.0+commit.mock'
-        };
-        console.warn('SOLC running in mock mode for browser compatibility');
-        this.isInitialized = true;
+        console.warn('SOLC not available in browser environment');
+        this.initializeMockSolc();
         return;
       }
       
-      // Only import solc in Node.js environment
-      const solcModule = await import('solc');
-      this.solc = solcModule.default;
-      this.isInitialized = true;
+      // Only import solc in Node.js environment with webpack externals
+      if (typeof require !== 'undefined') {
+        try {
+          // Use require for Node.js environment to avoid webpack chunking issues
+          const solcModule = require('solc');
+          this.solc = solcModule;
+          this.isInitialized = true;
+        } catch (requireError) {
+          console.warn('Failed to require solc, falling back to mock:', requireError);
+          this.initializeMockSolc();
+        }
+      } else {
+        this.initializeMockSolc();
+      }
     } catch (error) {
       console.error('Failed to initialize SOLC:', error);
-      // Fallback to mock implementation
-      this.solc = {
-        compile: () => ({ errors: [], contracts: {} }),
-        version: () => '0.8.0+commit.mock'
-      };
-      this.isInitialized = true;
+      this.initializeMockSolc();
     }
+  }
+
+  private initializeMockSolc() {
+    // Fallback to mock implementation
+    this.solc = {
+      compile: () => ({ errors: [], contracts: {} }),
+      version: () => '0.8.0+commit.mock'
+    };
+    this.isInitialized = true;
   }
 
   async waitForInitialization(): Promise<void> {
